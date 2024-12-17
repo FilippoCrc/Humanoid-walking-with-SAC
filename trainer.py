@@ -21,18 +21,23 @@ class SACTrainer:
         eval_episodes=10,
         debug_config = None
     ):
-                # Default debugging configuration
+        # Default debugging configuration with more focused outputs
         self.debug_config = {
-            'print_episode_progress': True,    # Basic episode information
-            'print_detailed_loss': True,      # Detailed loss components
-            'print_action_values': False,      # Action statistics
-            'print_network_updates': True,    # Network update information
-            'print_buffer_stats': False,       # Replay buffer statistics
-            'print_eval_details': True         # Detailed evaluation information
+            'print_episode_summary': True,     # Summary of each episode
+            'print_eval_summary': True,        # Summary of evaluation runs
+            'print_periodic_stats': True       # Periodic training statistics
         }
-        # Update with user-provided config if any
         if debug_config is not None:
             self.debug_config.update(debug_config)
+
+        # Storage for episode statistics
+        self.episode_stats = {
+            'q1_losses': [],
+            'q2_losses': [],
+            'policy_losses': [],
+            'action_means': [],
+            'action_stds': []
+        }
         # Initialize training parameters
         self.env_name = env_name
         self.max_episodes = max_episodes
@@ -72,6 +77,46 @@ class SACTrainer:
         # Create directory for saving results
         self.save_dir = f"results/sac_{env_name}_{int(time.time())}"
         os.makedirs(self.save_dir, exist_ok=True)
+    
+    def print_episode_summary(self, episode, total_steps, episode_reward, episode_length, rolling_reward):
+        """Prints a concise summary of the episode"""
+        if not self.debug_config['print_episode_summary']:
+            return
+
+        # Calculate mean losses for the episode
+        mean_losses = {
+            'q1': np.mean(self.episode_stats['q1_losses']),
+            'q2': np.mean(self.episode_stats['q2_losses']),
+            'policy': np.mean(self.episode_stats['policy_losses'])
+        }
+        
+        # Calculate action statistics
+        action_means = np.mean(self.episode_stats['action_means'], axis=0)
+        action_stds = np.mean(self.episode_stats['action_stds'], axis=0)
+
+        print(f"\n{'='*50}")
+        print(f"Episode {episode} Summary:")
+        print(f"Steps: {total_steps} | Length: {episode_length}")
+        print(f"Reward: {episode_reward:.2f} | Rolling Avg: {rolling_reward:.2f}")
+        print(f"Mean Losses - Q1: {mean_losses['q1']:.4f}, Q2: {mean_losses['q2']:.4f}, Policy: {mean_losses['policy']:.4f}")
+        print(f"Action Means: {action_means}")
+        print(f"Action StDevs: {action_stds}")
+        print(f"{'='*50}")
+
+        # Clear episode statistics for next episode
+        for key in self.episode_stats:
+            self.episode_stats[key] = []
+
+    def update_episode_stats(self, losses, actions):
+        """Updates episode statistics during training"""
+        if losses:
+            self.episode_stats['q1_losses'].append(losses['q1_loss'])
+            self.episode_stats['q2_losses'].append(losses['q2_loss'])
+            self.episode_stats['policy_losses'].append(losses['policy_loss'])
+        
+        if actions is not None:
+            self.episode_stats['action_means'].append(np.mean(actions, axis=0))
+            self.episode_stats['action_stds'].append(np.std(actions, axis=0))
 
     def debug_print(self, category, message):
         """Utility function for conditional debugging output"""
@@ -79,9 +124,9 @@ class SACTrainer:
             print(f"[DEBUG-{category}] {message}")
 
     def evaluate_policy(self):
-        """Evaluation with debug information"""
+        """Evaluation with concise output"""
         eval_rewards = []
-        eval_steps = []
+        eval_lengths = []
         
         for eval_ep in range(self.eval_episodes):
             state, _ = self.eval_env.reset()
@@ -91,156 +136,143 @@ class SACTrainer:
             
             while not done:
                 action = self.agent.select_action(state, evaluate=True)
-                
-                self.debug_print('action_values', 
-                    f"Eval Episode {eval_ep} - Step {episode_steps} - Action: {action}")
-                
                 next_state, reward, terminated, truncated, _ = self.eval_env.step(action)
                 done = terminated or truncated
                 episode_reward += reward
                 episode_steps += 1
                 state = next_state
             
-            self.debug_print('eval_details',
-                f"Eval Episode {eval_ep} complete - Reward: {episode_reward:.2f} - Steps: {episode_steps}")
-            
             eval_rewards.append(episode_reward)
-            eval_steps.append(episode_steps)
-        
+            eval_lengths.append(episode_steps)
+
         mean_reward = np.mean(eval_rewards)
         std_reward = np.std(eval_rewards)
-        
-        self.debug_print('eval_details',
-            f"\nEvaluation Summary:\n"
-            f"Mean Reward: {mean_reward:.2f} ± {std_reward:.2f}\n"
-            f"Mean Steps: {np.mean(eval_steps):.1f}\n"
-            f"Success Rate: {sum(r > 300 for r in eval_rewards)/len(eval_rewards):.2%}")
-        
+
+        if self.debug_config['print_eval_summary']:
+            print(f"\n{'='*50}")
+            print(f"Evaluation Summary:")
+            print(f"Mean Reward: {mean_reward:.2f} ± {std_reward:.2f}")
+            print(f"Mean Episode Length: {np.mean(eval_lengths):.1f}")
+            print(f"Success Rate: {sum(r > 300 for r in eval_rewards)/len(eval_rewards):.2%}")
+            print(f"{'='*50}")
+
         return mean_reward, std_reward
 
     def train(self):
-        """Training loop with comprehensive debugging"""
+        """
+        Main training loop for SAC algorithm.
+        Handles episode management, statistics collection, and model evaluation.
+        """
+        # Initialize training variables
         total_steps = 0
         best_eval_reward = float('-inf')
         early_stop_patience = 50
         no_improvement_count = 0
         rolling_reward = deque(maxlen=100)
-        
-        self.debug_print('episode_progress',
-            f"\nStarting training on {self.env_name}\n"
-            f"State dim: {self.env.observation_space.shape[0]}\n"
-            f"Action dim: {self.env.action_space.shape[0]}\n"
-            f"Training parameters:\n"
-            f"  Max episodes: {self.max_episodes}\n"
-            f"  Batch size: {self.batch_size}\n"
-            f"  Updates per step: {self.updates_per_step}")
-        
+        episode_reward = 0
+        episode_steps = 0
+
+        # Print initial training information
+        print(f"\nStarting training on {self.env_name}")
+        print(f"State dim: {self.env.observation_space.shape[0]}")
+        print(f"Action dim: {self.env.action_space.shape[0]}")
+        print(f"Training parameters:")
+        print(f"  Max episodes: {self.max_episodes}")
+        print(f"  Batch size: {self.batch_size}")
+        print(f"  Updates per step: {self.updates_per_step}")
+        print("\n" + "="*50)
+
         for episode in range(self.max_episodes):
+            # Reset environment and episode variables
             state, _ = self.env.reset()
             episode_reward = 0
             episode_steps = 0
-            episode_losses = []
-            action_values = []  # Track actions for debugging
+            episode_actions = []
             done = False
             
+            # Reset episode statistics
+            for key in self.episode_stats:
+                self.episode_stats[key] = []
+
             while not done:
+                # Select action: random for exploration or from policy
                 if total_steps < self.start_steps:
                     action = self.env.action_space.sample()
-                    self.debug_print('action_values', 
-                        f"Random action at step {total_steps}: {action}")
                 else:
                     action = self.agent.select_action(state)
-                    self.debug_print('action_values', 
-                        f"Policy action at step {total_steps}: {action}")
                 
-                action_values.append(action)
+                # Store action for statistics
+                episode_actions.append(action)
+                
+                # Take action in environment
                 next_state, reward, terminated, truncated, _ = self.env.step(action)
                 done = terminated or truncated
                 episode_steps += 1
                 total_steps += 1
                 episode_reward += reward
                 
+                # Store transition in replay buffer
                 self.agent.replay_buffer.push(state, action, reward, next_state, done)
                 
-                self.debug_print('buffer_stats',
-                    f"Buffer size: {len(self.agent.replay_buffer)} - "
-                    f"Episode step: {episode_steps}")
-                
+                # Update networks if enough samples are gathered
                 if len(self.agent.replay_buffer) > self.batch_size:
-                    for update_idx in range(self.updates_per_step):
+                    for _ in range(self.updates_per_step):
                         losses = self.agent.update_parameters(self.batch_size)
-                        episode_losses.append(losses)
-                        
-                        self.debug_print('network_updates',
-                            f"Update {update_idx} at step {total_steps}:\n"
-                            f"  Q1 Loss: {losses['q1_loss']:.4f}\n"
-                            f"  Q2 Loss: {losses['q2_loss']:.4f}\n"
-                            f"  Policy Loss: {losses['policy_loss']:.4f}")
+                        self.update_episode_stats(losses, None)  # Update loss statistics
                 
                 state = next_state
                 
+                # End episode if max steps reached
                 if episode_steps >= self.max_steps:
                     done = True
+
+            # Update action statistics at episode end
+            self.update_episode_stats(None, episode_actions)
             
-            # Episode completion statistics
+            # Store episode information
             self.rewards_history.append(episode_reward)
             self.episode_length_history.append(episode_steps)
             rolling_reward.append(episode_reward)
             
-            if episode_losses:
-                avg_losses = {k: np.mean([l[k] for l in episode_losses])
-                            for k in episode_losses[0].keys()}
-                self.loss_history.append(avg_losses)
-                
-                self.debug_print('detailed_loss',
-                    f"\nEpisode {episode} Average Losses:\n"
-                    f"  Q1 Loss: {avg_losses['q1_loss']:.4f}\n"
-                    f"  Q2 Loss: {avg_losses['q2_loss']:.4f}\n"
-                    f"  Policy Loss: {avg_losses['policy_loss']:.4f}")
+            # Print episode summary
+            self.print_episode_summary(
+                episode, total_steps, episode_reward,
+                episode_steps, np.mean(rolling_reward)
+            )
             
-            # Action statistics for the episode
-            if self.debug_config['print_action_values']:
-                action_array = np.array(action_values)
-                self.debug_print('action_values',
-                    f"\nEpisode {episode} Action Statistics:\n"
-                    f"  Mean: {action_array.mean(axis=0)}\n"
-                    f"  Std: {action_array.std(axis=0)}\n"
-                    f"  Min: {action_array.min(axis=0)}\n"
-                    f"  Max: {action_array.max(axis=0)}")
-            
-            # Episode summary
-            self.debug_print('episode_progress',
-                f"\nEpisode {episode} Complete:\n"
-                f"Total steps: {total_steps}\n"
-                f"Episode reward: {episode_reward:.2f}\n"
-                f"Episode length: {episode_steps}\n"
-                f"Rolling avg reward: {np.mean(rolling_reward):.2f}")
-            
-            # Evaluation phase
+            # Evaluate policy periodically
             if episode % self.eval_interval == 0:
                 eval_reward, eval_std = self.evaluate_policy()
                 self.eval_rewards_history.append(eval_reward)
                 
+                # Save if best performance
                 if eval_reward > best_eval_reward:
                     best_eval_reward = eval_reward
                     self.agent.save(f"{self.save_dir}/best_model.pt")
                     no_improvement_count = 0
+                    print(f"New best model saved with reward: {best_eval_reward:.2f}")
                 else:
                     no_improvement_count += 1
                 
+                # Save training history
                 self.save_training_history()
-            
+                
             # Early stopping check
             if no_improvement_count >= early_stop_patience:
-                self.debug_print('episode_progress',
-                    "No improvement for a while. Stopping training.")
+                print("\nNo improvement for a while. Stopping training.")
                 break
             
-            # Success criterion check
+            # Success criterion check for BipedalWalker
             if np.mean(rolling_reward) > 300:
-                self.debug_print('episode_progress',
-                    "Environment solved! Stopping training.")
+                print("\nEnvironment solved! Stopping training.")
                 break
+
+        # Final save and summary
+        self.agent.save(f"{self.save_dir}/final_model.pt")
+        print("\nTraining completed!")
+        print(f"Total steps: {total_steps}")
+        print(f"Best evaluation reward: {best_eval_reward:.2f}")
+        print(f"Final average reward: {np.mean(rolling_reward):.2f}")
     
     def save_training_history(self):
         """Saves training metrics to disk"""
@@ -254,20 +286,3 @@ class SACTrainer:
         with open(f"{self.save_dir}/training_history.json", 'w') as f:
             json.dump(history, f)
 
-def main():
-    # Create trainer with default parameters
-    trainer = SACTrainer(
-        env_name='BipedalWalker-v3',
-        max_episodes=1000,
-        max_steps=1000,
-        batch_size=256,
-        eval_interval=10,
-        updates_per_step=1,
-        start_steps=10000
-    )
-    
-    # Start training
-    trainer.train()
-
-if __name__ == "__main__":
-    main()
