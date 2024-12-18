@@ -11,7 +11,7 @@ class SACTrainer:
     """Handles the training process for SAC algorithm"""
     def __init__(
         self,
-        env_name='BipedalWalker-v3',
+        env_name='Walker2d-v4',
         max_episodes=1000,
         max_steps=1000,
         batch_size=256,
@@ -73,10 +73,6 @@ class SACTrainer:
         self.eval_rewards_history = []
         self.episode_length_history = []
         self.loss_history = []
-        
-        # Create directory for saving results
-        self.save_dir = f"results/sac_{env_name}_{int(time.time())}"
-        os.makedirs(self.save_dir, exist_ok=True)
     
     def print_episode_summary(self, episode, total_steps, episode_reward, episode_length, rolling_reward):
         """Prints a concise summary of the episode"""
@@ -181,6 +177,10 @@ class SACTrainer:
         print(f"  Batch size: {self.batch_size}")
         print(f"  Updates per step: {self.updates_per_step}")
         print("\n" + "="*50)
+
+        # Create directory for saving results
+        self.save_dir = f"results/sac_{self.env_name}_{int(time.time())}"
+        os.makedirs(self.save_dir, exist_ok=True)
 
         for episode in range(self.max_episodes):
             # Reset environment and episode variables

@@ -10,7 +10,7 @@ MODEL_DIR = "results\sac_BipedalWalker-v3_1734513256"  # Change this to your mod
 MODEL_PATH = os.path.join(MODEL_DIR, "best_model.pt")
 
 def main():
-    parser = argparse.ArgumentParser(description='Train and evaluate SAC on BipedalWalker')
+    parser = argparse.ArgumentParser(description='Train and evaluate SAC on Walker2d-v4 ')
     
     # Simplified command line arguments
     parser.add_argument('--render', action='store_true', 

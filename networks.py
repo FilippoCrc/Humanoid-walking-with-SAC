@@ -50,7 +50,7 @@ class GaussianPolicy(nn.Module):
         
         # Store action bounds for scaling
         if action_bounds is None:
-            action_bounds = (-1, 1)  # Default bounds for BipedalWalker
+            action_bounds = (-1, 1)  # Default bounds for BipedalWalker and walker2D
         self.action_scale = (action_bounds[1] - action_bounds[0]) / 2
         self.action_bias = (action_bounds[1] + action_bounds[0]) / 2
         
