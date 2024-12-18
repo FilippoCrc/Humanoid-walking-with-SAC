@@ -26,13 +26,13 @@ def main():
 
     # Create the trainer with default parameters
     trainer = SACTrainer(
-        env_name='BipedalWalker-v3',
-        max_episodes=1000,
-        max_steps=1000,
+        env_name='BipedalWalkerHardcore-v3',
+        max_episodes=2000,
+        max_steps=2000,
         batch_size=256,
-        eval_interval=10,
+        eval_interval=20,
         updates_per_step=1,
-        start_steps=10000,
+        start_steps=25000,
         eval_episodes=args.episodes
     )
 
@@ -49,7 +49,7 @@ def main():
         
         # Set up environment with rendering if specified
         if args.render:
-            trainer.eval_env = gym.make('BipedalWalker-v3', render_mode='human')
+            trainer.eval_env = gym.make('BipedalWalkerHardcore-v3', render_mode='human')
         
         try:
             # Verify model file exists
