@@ -2,17 +2,26 @@ import argparse
 import numpy as np
 import gymnasium as gym
 from trainer import SACTrainer
+import torch
+import os
+
+# Define the path to the model
+MODEL_DIR = "results\sac_BipedalWalker-v3_1734513256"  # Change this to your model directory
+MODEL_PATH = os.path.join(MODEL_DIR, "best_model.pt")
 
 def main():
     parser = argparse.ArgumentParser(description='Train and evaluate SAC on BipedalWalker')
+    
+    # Simplified command line arguments
     parser.add_argument('--render', action='store_true', 
                        help='Render the environment during evaluation')
-    parser.add_argument('-t', '--train', action='store_true',
+    parser.add_argument('--train', action='store_true',
                        help='Train the SAC agent')
-    parser.add_argument('-e', '--evaluate', action='store_true',
+    parser.add_argument('--evaluate', action='store_true',
                        help='Evaluate the trained agent')
     parser.add_argument('--episodes', type=int, default=10,
                        help='Number of evaluation episodes')
+    
     args = parser.parse_args()
 
     # Create the trainer with default parameters
@@ -27,16 +36,76 @@ def main():
         eval_episodes=args.episodes
     )
 
-    # When evaluating, we need to recreate the evaluation environment with render mode if specified
-    if args.evaluate and args.render:
-        trainer.eval_env = gym.make('BipedalWalker-v3', render_mode='human')
-
-    # Handle both training and evaluation based on command line arguments
+    # Training phase
     if args.train:
-        trainer.train()  # This will save the model after training
-    
+        print("\nStarting training phase...")
+        trainer.train()
+        print("Training completed!")
+
+    # Evaluation phase
     if args.evaluate:
-        trainer.evaluate_policy()  # This will evaluate using the saved model
+        print("\nStarting evaluation phase...")
+        print(f"Using model path: {MODEL_PATH}")
+        
+        # Set up environment with rendering if specified
+        if args.render:
+            trainer.eval_env = gym.make('BipedalWalker-v3', render_mode='human')
+        
+        try:
+            # Verify model file exists
+            if not os.path.exists(MODEL_PATH):
+                raise FileNotFoundError(f"Model file not found at: {MODEL_PATH}")
+            
+            # Load the trained model
+            trainer.agent.load(MODEL_PATH)
+            print("Model loaded successfully!")
+            
+            # Perform evaluation
+            rewards = []
+            steps = []
+            
+            for episode in range(args.episodes):
+                state, _ = trainer.eval_env.reset()
+                episode_reward = 0
+                episode_steps = 0
+                done = False
+                
+                while not done:
+                    action = trainer.agent.select_action(state, evaluate=True)
+                    next_state, reward, terminated, truncated, _ = trainer.eval_env.step(action)
+                    done = terminated or truncated
+                    
+                    episode_reward += reward
+                    episode_steps += 1
+                    state = next_state
+                
+                rewards.append(episode_reward)
+                steps.append(episode_steps)
+                
+                print(f"Episode {episode + 1}/{args.episodes} - "
+                      f"Reward: {episode_reward:.2f} - "
+                      f"Steps: {episode_steps}")
+            
+            # Print evaluation summary
+            mean_reward = np.mean(rewards)
+            std_reward = np.std(rewards)
+            mean_steps = np.mean(steps)
+            success_rate = sum(r > 300 for r in rewards) / len(rewards)
+            
+            print("\nEvaluation Summary:")
+            print(f"Average Reward: {mean_reward:.2f} ± {std_reward:.2f}")
+            print(f"Average Steps: {mean_steps:.1f}")
+            print(f"Success Rate: {success_rate:.2%}")
+            
+        except FileNotFoundError as e:
+            print(f"Error: {str(e)}")
+            print("Please make sure you have trained the model first and "
+                  "the model path is correct.")
+        except Exception as e:
+            print(f"Error during evaluation: {str(e)}")
+        
+        finally:
+            trainer.eval_env.close()
 
 if __name__ == '__main__':
     main()
