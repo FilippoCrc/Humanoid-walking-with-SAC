@@ -74,9 +74,7 @@ class SACTrainer:
         self.episode_length_history = []
         self.loss_history = []
         
-        # Create directory for saving results
-        self.save_dir = f"results/sac_{env_name}_{int(time.time())}"
-        os.makedirs(self.save_dir, exist_ok=True)
+        
     
     def print_episode_summary(self, episode, total_steps, episode_reward, episode_length, rolling_reward):
         """Prints a concise summary of the episode"""
@@ -171,7 +169,9 @@ class SACTrainer:
         rolling_reward = deque(maxlen=100)
         episode_reward = 0
         episode_steps = 0
-
+        # Create directory for saving results
+        self.save_dir = f"results/sac_{self.env_name}_{int(time.time())}"
+        os.makedirs(self.save_dir, exist_ok=True)
         # Print initial training information
         print(f"\nStarting training on {self.env_name}")
         print(f"State dim: {self.env.observation_space.shape[0]}")

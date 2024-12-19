@@ -6,8 +6,8 @@ import torch
 import os
 
 # Define the path to the model
-MODEL_DIR = "results\sac_BipedalWalker-v3_1734513256"  # Change this to your model directory
-MODEL_PATH = os.path.join(MODEL_DIR, "final_model.pt")
+MODEL_DIR = "results\sac_BipedalWalkerHardcore-v3_1734515780"  # Change this to your model directory
+MODEL_PATH = os.path.join(MODEL_DIR, "best_model.pt")
 
 def main():
     parser = argparse.ArgumentParser(description='Train and evaluate SAC on BipedalWalker')
