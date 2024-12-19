@@ -148,9 +148,9 @@ def main():
     # Initialize the trainer with custom parameters
     trainer = NaoStandupSACTrainer(
         max_episodes=2000,          # Increased episodes for complex task
-        max_steps=2500,            # Match environment limit
+        max_steps=2500,            
         batch_size=256,
-        eval_interval=20,          # Evaluate every 20 episodes
+        eval_interval=10,          # Evaluate every 20 episodes
         updates_per_step=1,
         start_steps=10000,         # Initial random actions for exploration
         eval_episodes=5,           # Number of episodes for evaluation

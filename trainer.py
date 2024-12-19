@@ -241,7 +241,7 @@ class SACTrainer:
             )
             
             # Evaluate policy periodically
-            if episode % self.eval_interval == 0:
+            if episode % self.eval_interval == 0 and episode>2:
                 eval_reward, eval_std = self.evaluate_policy()
                 self.eval_rewards_history.append(eval_reward)
                 
@@ -252,7 +252,7 @@ class SACTrainer:
                     no_improvement_count = 0
                     print(f"New best model saved with reward: {best_eval_reward:.2f}")
                 else:
-                    no_improvement_count += 1
+                    no_improvement_count += 0
                 
                 # Save training history
                 self.save_training_history()
@@ -262,10 +262,10 @@ class SACTrainer:
                 print("\nNo improvement for a while. Stopping training.")
                 break
             
-            # Success criterion check for BipedalWalker
-            if np.mean(rolling_reward) > 300:
-                print("\nEnvironment solved! Stopping training.")
-                break
+            # # Success criterion check for BipedalWalker
+            # if np.mean(rolling_reward) > 300:
+            #     print("\nEnvironment solved! Stopping training.")
+            #     break
 
         # Final save and summary
         self.agent.save(f"{self.save_dir}/final_model.pt")
