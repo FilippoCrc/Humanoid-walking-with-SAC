@@ -1,0 +1,100 @@
+Episode 0:
+  Reward: 41.60
+  Length: 19
+  Distance: 0.159
+  Average Velocity: 0.008
+  Forward Reward: -0.038
+  Control Cost: -1.879
+  Contact Cost: -0.090
+  Alive Bonus: 3.500
+------------------------------
+Episode 1:
+  Reward: 49.97
+  Length: 22
+  Distance: 0.553
+  Average Velocity: 0.025
+  Forward Reward: 0.488
+  Control Cost: -1.265
+  Contact Cost: -0.002
+  Alive Bonus: 3.500
+------------------------------
+Episode 2:
+  Reward: 37.18
+  Length: 17
+  Distance: 0.165
+  Average Velocity: 0.010
+  Forward Reward: -0.162
+  Control Cost: -1.371
+  Contact Cost: -0.055
+  Alive Bonus: 3.500
+------------------------------
+Episode 3:
+  Reward: 35.47
+  Length: 16
+  Distance: 0.252
+  Average Velocity: 0.016
+  Forward Reward: -0.184
+  Control Cost: -1.843
+  Contact Cost: -0.001
+  Alive Bonus: 3.500
+------------------------------
+Episode 4:
+  Reward: 30.36
+  Length: 15
+  Distance: 0.002
+  Average Velocity: 0.000
+  Forward Reward: -0.121
+  Control Cost: -1.435
+  Contact Cost: -0.009
+  Alive Bonus: 3.500
+------------------------------
+Episode 5:
+  Reward: 228.20
+  Length: 71
+  Distance: 0.106
+  Average Velocity: 0.001
+  Forward Reward: -0.370
+  Control Cost: -0.288
+  Contact Cost: -0.000
+  Alive Bonus: 3.500
+------------------------------
+Episode 6:
+  Reward: 130.93
+  Length: 39
+  Distance: 0.370
+  Average Velocity: 0.009
+  Forward Reward: 0.035
+  Control Cost: -0.398
+  Contact Cost: -0.001
+  Alive Bonus: 3.500
+------------------------------
+Episode 7:
+  Reward: 79.49
+  Length: 23
+  Distance: 0.419
+  Average Velocity: 0.018
+  Forward Reward: -0.072
+  Control Cost: -0.687
+  Contact Cost: -0.009
+  Alive Bonus: 3.500
+------------------------------
+Episode 8:
+  Reward: 199.79
+  Length: 61
+  Distance: 0.346
+  Average Velocity: 0.006
+  Forward Reward: -0.005
+  Control Cost: -0.129
+  Contact Cost: -0.002
+  Alive Bonus: 3.500
+------------------------------
+Episode 9:
+  Reward: 130.74
+  Length: 39
+  Distance: 0.337
+  Average Velocity: 0.009
+  Forward Reward: -0.054
+  Control Cost: -0.611
+  Contact Cost: -0.002
+  Alive Bonus: 3.500
+------------------------------

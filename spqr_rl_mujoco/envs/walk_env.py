@@ -67,8 +67,8 @@ class NaoWalk(MujocoEnv, utils.EzPickle):
         # Get z position of torso
         torso_z = data.qpos[2]
         
-        # Calculate alive bonus (similar to Humanoid-v4)
-        alive_bonus = 5.0
+        # Calculate aliv bonus (similar to Humanoid-v4)
+        alive_bonus = 3.5 #this value must be a lot lower becouse the robot stays on balance much easier, in mujoco it's 5
         
         # Calculate rewards components (similar to Humanoid-v4)
         reward_forward = forward_vel
@@ -82,7 +82,7 @@ class NaoWalk(MujocoEnv, utils.EzPickle):
         
         # Check termination conditions
         terminated = False
-        if torso_z < 0.1 or torso_z > 0.5:  # Similar to Humanoid-v4 termination conditions but smaller to match nao height
+        if torso_z < 0.2 or torso_z > 0.5:  # Similar to Humanoid-v4 termination conditions but smaller to match nao height
         
             terminated = True
 

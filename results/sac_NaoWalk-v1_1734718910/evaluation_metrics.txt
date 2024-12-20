@@ -1,0 +1,200 @@
+Episode 0:
+  Reward: 34.57
+  Length: 11
+  Distance: 0.256
+  Average Velocity: 0.023
+  Forward Reward: 0.451
+  Control Cost: -0.168
+  Contact Cost: -0.019
+  Alive Bonus: 3.500
+------------------------------
+Episode 1:
+  Reward: 32.80
+  Length: 11
+  Distance: 0.207
+  Average Velocity: 0.019
+  Forward Reward: 0.135
+  Control Cost: -0.699
+  Contact Cost: -0.008
+  Alive Bonus: 3.500
+------------------------------
+Episode 2:
+  Reward: 35.84
+  Length: 11
+  Distance: 0.276
+  Average Velocity: 0.025
+  Forward Reward: 0.270
+  Control Cost: -0.532
+  Contact Cost: -0.009
+  Alive Bonus: 3.500
+------------------------------
+Episode 3:
+  Reward: 23.37
+  Length: 8
+  Distance: 0.127
+  Average Velocity: 0.016
+  Forward Reward: 0.652
+  Control Cost: -1.199
+  Contact Cost: -0.026
+  Alive Bonus: 3.500
+------------------------------
+Episode 4:
+  Reward: 43.25
+  Length: 14
+  Distance: 0.176
+  Average Velocity: 0.013
+  Forward Reward: 0.012
+  Control Cost: -0.421
+  Contact Cost: -0.000
+  Alive Bonus: 3.500
+------------------------------
+Episode 5:
+  Reward: 114.83
+  Length: 33
+  Distance: 0.264
+  Average Velocity: 0.008
+  Forward Reward: -0.108
+  Control Cost: -0.204
+  Contact Cost: -0.011
+  Alive Bonus: 3.500
+------------------------------
+Episode 6:
+  Reward: 126.40
+  Length: 37
+  Distance: 0.137
+  Average Velocity: 0.004
+  Forward Reward: -0.125
+  Control Cost: -0.009
+  Contact Cost: -0.001
+  Alive Bonus: 3.500
+------------------------------
+Episode 7:
+  Reward: 212.14
+  Length: 61
+  Distance: 0.394
+  Average Velocity: 0.006
+  Forward Reward: 0.063
+  Control Cost: -0.050
+  Contact Cost: -0.000
+  Alive Bonus: 3.500
+------------------------------
+Episode 8:
+  Reward: 480.39
+  Length: 140
+  Distance: 0.189
+  Average Velocity: 0.001
+  Forward Reward: -0.232
+  Control Cost: -0.109
+  Contact Cost: -0.001
+  Alive Bonus: 3.500
+------------------------------
+Episode 9:
+  Reward: 119.04
+  Length: 34
+  Distance: 0.287
+  Average Velocity: 0.008
+  Forward Reward: -0.029
+  Control Cost: -0.008
+  Contact Cost: -0.000
+  Alive Bonus: 3.500
+------------------------------
+Episode 10:
+  Reward: 3499.07
+  Length: 1000
+  Distance: 0.374
+  Average Velocity: 0.000
+  Forward Reward: 0.048
+  Control Cost: -0.012
+  Contact Cost: -0.000
+  Alive Bonus: 3.500
+------------------------------
+Episode 11:
+  Reward: 3498.03
+  Length: 1000
+  Distance: 0.296
+  Average Velocity: 0.000
+  Forward Reward: 0.049
+  Control Cost: -0.011
+  Contact Cost: -0.001
+  Alive Bonus: 3.500
+------------------------------
+Episode 12:
+  Reward: 3498.53
+  Length: 1000
+  Distance: 0.365
+  Average Velocity: 0.000
+  Forward Reward: -0.028
+  Control Cost: -0.001
+  Contact Cost: -0.000
+  Alive Bonus: 3.500
+------------------------------
+Episode 13:
+  Reward: 3497.56
+  Length: 1000
+  Distance: 0.334
+  Average Velocity: 0.000
+  Forward Reward: 0.055
+  Control Cost: -0.023
+  Contact Cost: -0.001
+  Alive Bonus: 3.500
+------------------------------
+Episode 14:
+  Reward: 3498.53
+  Length: 1000
+  Distance: 0.385
+  Average Velocity: 0.000
+  Forward Reward: -0.040
+  Control Cost: -0.002
+  Contact Cost: -0.000
+  Alive Bonus: 3.500
+------------------------------
+Episode 15:
+  Reward: 3503.52
+  Length: 1000
+  Distance: 0.323
+  Average Velocity: 0.000
+  Forward Reward: 0.000
+  Control Cost: -0.002
+  Contact Cost: -0.000
+  Alive Bonus: 3.500
+------------------------------
+Episode 16:
+  Reward: 54.77
+  Length: 15
+  Distance: 0.340
+  Average Velocity: 0.023
+  Forward Reward: -0.031
+  Control Cost: -0.002
+  Contact Cost: -0.001
+  Alive Bonus: 3.500
+------------------------------
+Episode 17:
+  Reward: 3503.23
+  Length: 1000
+  Distance: 0.305
+  Average Velocity: 0.000
+  Forward Reward: 0.000
+  Control Cost: -0.002
+  Contact Cost: -0.000
+  Alive Bonus: 3.500
+------------------------------
+Episode 18:
+  Reward: 109.32
+  Length: 31
+  Distance: 0.285
+  Average Velocity: 0.009
+  Forward Reward: -0.038
+  Control Cost: -0.012
+  Contact Cost: -0.000
+  Alive Bonus: 3.500
+------------------------------
+Episode 19:
+  Reward: 3503.63
+  Length: 1000
+  Distance: 0.333
+  Average Velocity: 0.000
+  Forward Reward: 0.000
+  Control Cost: -0.002
+  Contact Cost: -0.000
+  Alive Bonus: 3.500
+------------------------------

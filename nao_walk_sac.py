@@ -16,7 +16,7 @@ if torch.cuda.is_available():
 
 def capped_cubic_video_schedule(episode_id: int) -> bool:
     """Video recording schedule for evaluation"""
-    return episode_id % 40 == 0  # Record every 40 episodes
+    return episode_id % 5 == 0  # Record every 40 episodes
 
 class NaoWalkSACTrainer(SACTrainer):
     """Extended SACTrainer specifically for Nao Walking environment"""
@@ -121,7 +121,7 @@ class NaoWalkSACTrainer(SACTrainer):
             })
 
             # Record successful episodes if video environment exists
-            if self.render_eval and episode_reward > 300:  # Threshold for "good" episodes
+            if self.render_eval :  # Threshold for "good" episodes
                 try:
                     # Run the same episode in the video environment
                     video_state, _ = self.video_env.reset()
