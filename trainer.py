@@ -74,9 +74,7 @@ class SACTrainer:
         self.episode_length_history = []
         self.loss_history = []
         
-        # Create directory for saving results
-        self.save_dir = f"results/sac_{env_name}_{int(time.time())}"
-        os.makedirs(self.save_dir, exist_ok=True)
+        
     
     def print_episode_summary(self, episode, total_steps, episode_reward, episode_length, rolling_reward):
         """Prints a concise summary of the episode"""
@@ -171,7 +169,9 @@ class SACTrainer:
         rolling_reward = deque(maxlen=100)
         episode_reward = 0
         episode_steps = 0
-
+        # Create directory for saving results
+        self.save_dir = f"results/sac_{self.env_name}_{int(time.time())}"
+        os.makedirs(self.save_dir, exist_ok=True)
         # Print initial training information
         print(f"\nStarting training on {self.env_name}")
         print(f"State dim: {self.env.observation_space.shape[0]}")
@@ -241,7 +241,7 @@ class SACTrainer:
             )
             
             # Evaluate policy periodically
-            if episode % self.eval_interval == 0:
+            if episode % self.eval_interval == 0 and episode>2:
                 eval_reward, eval_std = self.evaluate_policy()
                 self.eval_rewards_history.append(eval_reward)
                 
@@ -252,7 +252,7 @@ class SACTrainer:
                     no_improvement_count = 0
                     print(f"New best model saved with reward: {best_eval_reward:.2f}")
                 else:
-                    no_improvement_count += 1
+                    no_improvement_count += 0
                 
                 # Save training history
                 self.save_training_history()
@@ -262,10 +262,10 @@ class SACTrainer:
                 print("\nNo improvement for a while. Stopping training.")
                 break
             
-            # Success criterion check for BipedalWalker
-            if np.mean(rolling_reward) > 300:
-                print("\nEnvironment solved! Stopping training.")
-                break
+            # # Success criterion check for BipedalWalker
+            # if np.mean(rolling_reward) > 300:
+            #     print("\nEnvironment solved! Stopping training.")
+            #     break
 
         # Final save and summary
         self.agent.save(f"{self.save_dir}/final_model.pt")

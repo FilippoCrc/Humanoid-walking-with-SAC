@@ -6,9 +6,9 @@ import torch
 import os
 
 # Define the path to the model
-MODEL_DIR = "results\sac_BipedalWalker-v3_1734513256"  # Change this to your model directory
-MODEL_PATH = os.path.join(MODEL_DIR, "final_model.pt")
-
+MODEL_DIR = "results\sac_Humanoid-v5_1734629000"  # Change this to your model directory
+MODEL_PATH = os.path.join(MODEL_DIR, "best_model.pt")
+ENV_NAME = "Humanoid-v4"
 def main():
     parser = argparse.ArgumentParser(description='Train and evaluate SAC on BipedalWalker')
     
@@ -23,16 +23,15 @@ def main():
                        help='Number of evaluation episodes')
     
     args = parser.parse_args()
-
     # Create the trainer with default parameters
     trainer = SACTrainer(
-        env_name='BipedalWalker-v3',
-        max_episodes=1000,
+        env_name=ENV_NAME,
+        max_episodes=20000,
         max_steps=1000,
         batch_size=256,
-        eval_interval=10,
+        eval_interval=20,
         updates_per_step=1,
-        start_steps=10000,
+        start_steps=15000,
         eval_episodes=args.episodes
     )
 
@@ -49,7 +48,7 @@ def main():
         
         # Set up environment with rendering if specified
         if args.render:
-            trainer.eval_env = gym.make('BipedalWalker-v3', render_mode='human')
+            trainer.eval_env = gym.make(ENV_NAME, render_mode='human')
         
         try:
             # Verify model file exists
