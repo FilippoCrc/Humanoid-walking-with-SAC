@@ -5,26 +5,7 @@ import numpy as np
 from collections import deque
 import random
 from networks import QNetwork, GaussianPolicy
-
-class ReplayBuffer:
-    """Stores experience tuples for off-policy training"""
-    def __init__(self, capacity=1000000):
-        self.buffer = deque(maxlen=capacity)
-    
-    def push(self, state, action, reward, next_state, done):
-        self.buffer.append((state, action, reward, next_state, done))
-    
-    def sample(self, batch_size):
-        # Random sampling with replacement
-        transitions = random.sample(self.buffer, batch_size)
-        # Transpose the batch for easier access
-        state, action, reward, next_state, done = zip(*transitions)
-        return (np.array(state), np.array(action), np.array(reward), 
-                np.array(next_state), np.array(done))
-    
-    def __len__(self):
-        return len(self.buffer)
-
+from replay_buffer import ReplayBuffer, PrioritizedReplayBuffer
 
 class SAC:
     """Soft Actor-Critic implementation for continuous action spaces"""
@@ -32,14 +13,18 @@ class SAC:
         self,
         state_dim,
         action_dim,
-        hidden_dim=256,
+        hidden_dim=512,  # Increased for Humanoid
         gamma=0.99,
         tau=0.005,
         lr=3e-4,
         alpha=0.2,
         automatic_entropy_tuning=True,
+        use_per=False,   # New parameter to toggle PER
         device="cuda" if torch.cuda.is_available() else "cpu"
     ):
+        
+        self.device = device
+        
         self.gamma = gamma  # Discount factor
         self.tau = tau      # Soft update parameter
         self.alpha = alpha  # Temperature parameter
@@ -47,7 +32,7 @@ class SAC:
         self.automatic_entropy_tuning = automatic_entropy_tuning
 
         # Initialize the networks
-        self.policy = GaussianPolicy(state_dim, action_dim, hidden_dim).to(device)
+        self.policy = GaussianPolicy(state_dim, action_dim, hidden_dim, device=device).to(device)
         self.q1 = QNetwork(state_dim, action_dim, hidden_dim).to(device)
         self.q2 = QNetwork(state_dim, action_dim, hidden_dim).to(device)
         
@@ -57,7 +42,7 @@ class SAC:
         self.q1_target.load_state_dict(self.q1.state_dict())
         self.q2_target.load_state_dict(self.q2.state_dict())
 
-        # Initialize optimizers
+        # Initialize optimizers with different learning rates
         self.policy_optimizer = optim.Adam(self.policy.parameters(), lr=lr)
         self.q1_optimizer = optim.Adam(self.q1.parameters(), lr=lr)
         self.q2_optimizer = optim.Adam(self.q2.parameters(), lr=lr)
@@ -70,12 +55,32 @@ class SAC:
             self.log_alpha = torch.zeros(1, requires_grad=True, device=device)
             self.alpha_optimizer = optim.Adam([self.log_alpha], lr=lr)
 
-        # Initialize replay buffer
-        self.replay_buffer = ReplayBuffer()
+        # Initialize replay buffer based on use_per flag
+        if use_per:
+            self.replay_buffer = PrioritizedReplayBuffer(capacity=1000000)
+        else:
+            self.replay_buffer = ReplayBuffer(capacity=1000000)
+    
+        self.use_per = use_per
 
     def select_action(self, state, evaluate=False):
-        """Select an action from the policy"""
-        state = torch.FloatTensor(state).unsqueeze(0).to(self.device)
+        """
+        Select an action from the policy.
+        Args:
+            state: Can be either a numpy array or a torch tensor
+            evaluate: Boolean indicating whether to use deterministic action selection
+        """
+         # First check if state is already a tensor
+        if not isinstance(state, torch.Tensor):
+            state = torch.FloatTensor(state).to(self.device)
+    
+        # Make sure state has batch dimension
+        if state.dim() == 1:
+            state = state.unsqueeze(0)
+    
+        # Ensure state is on the correct device (although it should be already)
+        state = state.to(self.device)
+
         
         if evaluate:
             # During evaluation, use the mean action without sampling
@@ -83,16 +88,23 @@ class SAC:
                 mean, _ = self.policy(state)
                 return torch.tanh(mean).cpu().numpy()[0]
         else:
-            # During training, sample from the policy
+        # During training, sample from the policy
             with torch.no_grad():
                 action, _ = self.policy.sample(state)
                 return action.cpu().numpy()[0]
-
+            
+            
     def update_parameters(self, batch_size=256):
         """Update the networks using a batch of experiences"""
+
         # Sample a batch from replay buffer
-        state_batch, action_batch, reward_batch, next_state_batch, done_batch = \
-            self.replay_buffer.sample(batch_size)
+        if self.use_per:
+            state_batch, action_batch, reward_batch, next_state_batch, done_batch, indices, weights = self.replay_buffer.sample(batch_size)
+            # Convert weights to tensor
+            weights = torch.FloatTensor(weights).to(self.device)
+        else:
+            state_batch, action_batch, reward_batch, next_state_batch, done_batch = self.replay_buffer.sample(batch_size)
+            weights = 1.0
 
         # Convert to tensors
         state_batch = torch.FloatTensor(state_batch).to(self.device)
@@ -113,6 +125,12 @@ class SAC:
             # Calculate target including entropy term
             value_target = q_next - self.alpha * next_log_probs
             q_target = reward_batch + (1 - done_batch) * self.gamma * value_target
+
+        # Calculate TD errors for priority updates
+        if self.use_per:
+            with torch.no_grad():
+                td_error = torch.abs(self.q1(state_batch, action_batch) - q_target)
+                self.replay_buffer.update_priorities(indices, td_error.cpu().numpy())
 
         # Update Q-Networks
         q1_pred = self.q1(state_batch, action_batch)
@@ -163,14 +181,10 @@ class SAC:
     def _soft_update_target_networks(self):
         """Soft update the target networks using the tau parameter"""
         for target_param, param in zip(self.q1_target.parameters(), self.q1.parameters()):
-            target_param.data.copy_(
-                target_param.data * (1.0 - self.tau) + param.data * self.tau
-            )
+            target_param.data.copy_( target_param.data * (1.0 - self.tau) + param.data * self.tau)
         
         for target_param, param in zip(self.q2_target.parameters(), self.q2.parameters()):
-            target_param.data.copy_(
-                target_param.data * (1.0 - self.tau) + param.data * self.tau
-            )
+            target_param.data.copy_( target_param.data * (1.0 - self.tau) + param.data * self.tau)
 
     def save(self, path):
         """Save the model parameters"""

@@ -17,10 +17,15 @@ class SACTrainer:
         batch_size=256,
         eval_interval=10,
         updates_per_step=1,
-        start_steps=10000,
-        eval_episodes=10,
+        start_steps=25000,
+        eval_episodes=20,
         debug_config = None
     ):
+        
+        # First, determine the device at the beginning of the trainer initialization
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        print(f"Using device: {self.device}")  # This will help us confirm which device is being used
+
         # Default debugging configuration with more focused outputs
         self.debug_config = {
             'print_episode_summary': True,     # Summary of each episode
@@ -60,12 +65,14 @@ class SACTrainer:
         self.agent = SAC(
             state_dim=state_dim,
             action_dim=action_dim,
-            hidden_dim=256,
+            hidden_dim=512,      # Increased network size for more complex environment
             gamma=0.99,
             tau=0.005,
             lr=3e-4,
             alpha=0.2,
-            automatic_entropy_tuning=True
+            automatic_entropy_tuning=True,
+            use_per=False,       # PER is disabled by default
+            device=self.device
         )
         
         # Initialize logging
@@ -131,7 +138,8 @@ class SACTrainer:
             done = False
             
             while not done:
-                action = self.agent.select_action(state, evaluate=True)
+                state_tensor = torch.FloatTensor(state).to(self.device)
+                action = self.agent.select_action(state_tensor, evaluate=True)
                 next_state, reward, terminated, truncated, _ = self.eval_env.step(action)
                 done = terminated or truncated
                 episode_reward += reward
@@ -149,7 +157,7 @@ class SACTrainer:
             print(f"Evaluation Summary:")
             print(f"Mean Reward: {mean_reward:.2f} ± {std_reward:.2f}")
             print(f"Mean Episode Length: {np.mean(eval_lengths):.1f}")
-            print(f"Success Rate: {sum(r > 300 for r in eval_rewards)/len(eval_rewards):.2%}")
+            print(f"Success Rate: {sum(r > 5000 for r in eval_rewards)/len(eval_rewards):.2%}")
             print(f"{'='*50}")
 
         return mean_reward, std_reward
@@ -162,7 +170,7 @@ class SACTrainer:
         # Initialize training variables
         total_steps = 0
         best_eval_reward = float('-inf')
-        early_stop_patience = 50
+        early_stop_patience = 1000
         no_improvement_count = 0
         rolling_reward = deque(maxlen=100)
         episode_reward = 0
@@ -195,11 +203,14 @@ class SACTrainer:
                 self.episode_stats[key] = []
 
             while not done:
+
+                state_tensor = torch.FloatTensor(state).to(self.device)
+
                 # Select action: random for exploration or from policy
                 if total_steps < self.start_steps:
                     action = self.env.action_space.sample()
                 else:
-                    action = self.agent.select_action(state)
+                    action = self.agent.select_action(state_tensor)
                 
                 # Store action for statistics
                 episode_actions.append(action)
@@ -241,7 +252,7 @@ class SACTrainer:
             )
             
             # Evaluate policy periodically
-            if episode % self.eval_interval == 0:
+            if episode % self.eval_interval == 0 and episode > 0:
                 eval_reward, eval_std = self.evaluate_policy()
                 self.eval_rewards_history.append(eval_reward)
                 
@@ -263,7 +274,7 @@ class SACTrainer:
                 break
             
             # Success criterion check for BipedalWalker
-            if np.mean(rolling_reward) > 300:
+            if np.mean(rolling_reward) > 50000:
                 print("\nEnvironment solved! Stopping training.")
                 break
 

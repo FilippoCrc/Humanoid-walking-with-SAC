@@ -6,8 +6,9 @@ import torch
 import os
 
 # Define the path to the model
-MODEL_DIR = "results\sac_BipedalWalker-v3_1734513256"  # Change this to your model directory
+MODEL_DIR = "results\sac_Humanoid-v4_1734645860"  # Change this to your model directory
 MODEL_PATH = os.path.join(MODEL_DIR, "best_model.pt")
+NAME_ENV = "Humanoid-v4"
 
 def main():
     parser = argparse.ArgumentParser(description='Train and evaluate SAC on Walker2d-v4 ')
@@ -26,13 +27,13 @@ def main():
 
     # Create the trainer with default parameters
     trainer = SACTrainer(
-        env_name='BipedalWalker-v3',
-        max_episodes=1000,
+        env_name= NAME_ENV,
+        max_episodes=10000,
         max_steps=1000,
         batch_size=256,
-        eval_interval=10,
+        eval_interval=20,
         updates_per_step=1,
-        start_steps=10000,
+        start_steps=25000,
         eval_episodes=args.episodes
     )
 
@@ -49,7 +50,7 @@ def main():
         
         # Set up environment with rendering if specified
         if args.render:
-            trainer.eval_env = gym.make('BipedalWalker-v3', render_mode='human')
+            trainer.eval_env = gym.make(NAME_ENV, render_mode='human')
         
         try:
             # Verify model file exists
@@ -90,7 +91,7 @@ def main():
             mean_reward = np.mean(rewards)
             std_reward = np.std(rewards)
             mean_steps = np.mean(steps)
-            success_rate = sum(r > 300 for r in rewards) / len(rewards)
+            success_rate = sum(r > 1000 for r in rewards) / len(rewards)
             
             print("\nEvaluation Summary:")
             print(f"Average Reward: {mean_reward:.2f} ± {std_reward:.2f}")
