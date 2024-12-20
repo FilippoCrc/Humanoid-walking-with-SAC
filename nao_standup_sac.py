@@ -5,6 +5,7 @@ import numpy as np
 from trainer import SACTrainer
 from gymnasium.wrappers import RecordVideo
 import time
+import argparse
 
 # Configure MuJoCo with EGL backend if GPU is available
 if torch.cuda.is_available():
@@ -16,23 +17,21 @@ if torch.cuda.is_available():
 
 def capped_cubic_video_schedule(episode_id: int) -> bool:
     """Video recording schedule for evaluation"""
-    if episode_id < 10000:
-        return int(round(episode_id ** (1.0 / 3))) ** 3 == episode_id
-    else:
-        return episode_id % 10000 == 0
+    return episode_id % 20 == 0  # Record every 20 episodes
 
 class NaoStandupSACTrainer(SACTrainer):
     """Extended SACTrainer specifically for Nao Standup environment"""
     def __init__(
         self,
         max_episodes=1000,
-        max_steps=1000,  # Matches the max_episode_steps from environment registration
+        max_steps=1000,
         batch_size=256,
         eval_interval=10,
         updates_per_step=1,
         start_steps=10000,
         eval_episodes=5,
-        render_eval=True
+        render_eval=True,
+        model_dir="results/sac_nao"
     ):
         # Register the environment
         gym.register(
@@ -40,6 +39,9 @@ class NaoStandupSACTrainer(SACTrainer):
             entry_point="spqr_rl_mujoco.envs.getup_env:NaoStandup",
             max_episode_steps=2500,
         )
+
+        self.model_dir = model_dir
+        self.best_model_path = os.path.join(model_dir, "best_model.pt")
 
         # Initialize parent class with Nao environment
         super().__init__(
@@ -75,7 +77,7 @@ class NaoStandupSACTrainer(SACTrainer):
         """Override evaluation to include additional Nao-specific metrics"""
         eval_rewards = []
         eval_lengths = []
-        head_heights = []  # Track the maximum height achieved by the head
+        head_heights = []
         
         for eval_ep in range(self.eval_episodes):
             state, _ = self.eval_env.reset()
@@ -87,10 +89,8 @@ class NaoStandupSACTrainer(SACTrainer):
             while not done:
                 action = self.agent.select_action(state, evaluate=True)
                 next_state, reward, terminated, truncated, info = self.eval_env.step(action)
-                # print("Reward components:", info)  # This will show uph_cost, quad_ctrl_cost, and quad_impact_cost
                 done = terminated or truncated
                 
-                # Track head height (available in the reward calculation)
                 if 'reward_linup' in info:
                     current_head_height = info['reward_linup']
                     max_head_height = max(max_head_height, current_head_height)
@@ -103,7 +103,6 @@ class NaoStandupSACTrainer(SACTrainer):
             eval_lengths.append(episode_steps)
             head_heights.append(max_head_height)
 
-            # Store episode metrics
             self.episode_metrics.append({
                 'episode': len(self.episode_metrics),
                 'reward': episode_reward,
@@ -126,10 +125,59 @@ class NaoStandupSACTrainer(SACTrainer):
             print(f"Success Rate: {sum(r > 300 for r in eval_rewards)/len(eval_rewards):.2%}")
             print(f"{'='*50}")
 
-        # Save metrics to file
         self._save_metrics()
-
         return mean_reward, std_reward
+
+    def evaluate_with_render(self, episodes=10):
+        """Evaluate the agent with human rendering"""
+        print("\nStarting human-rendered evaluation...")
+        
+        # Create a new environment with human rendering
+        render_env = gym.make("NaoStandup-v1", render_mode='human')
+        
+        rewards = []
+        steps = []
+        head_heights = []
+        
+        try:
+            for episode in range(episodes):
+                state, _ = render_env.reset()
+                episode_reward = 0
+                episode_steps = 0
+                max_head_height = float('-inf')
+                done = False
+                
+                while not done:
+                    action = self.agent.select_action(state, evaluate=True)
+                    next_state, reward, terminated, truncated, info = render_env.step(action)
+                    done = terminated or truncated
+                    
+                    if 'reward_linup' in info:
+                        current_head_height = info['reward_linup']
+                        max_head_height = max(max_head_height, current_head_height)
+                    
+                    episode_reward += reward
+                    episode_steps += 1
+                    state = next_state
+                
+                rewards.append(episode_reward)
+                steps.append(episode_steps)
+                head_heights.append(max_head_height)
+                
+                print(f"Episode {episode + 1}/{episodes} - "
+                      f"Reward: {episode_reward:.2f} - "
+                      f"Steps: {episode_steps} - "
+                      f"Max Height: {max_head_height:.3f}")
+            
+            # Print evaluation summary
+            print("\nEvaluation Summary:")
+            print(f"Average Reward: {np.mean(rewards):.2f} ± {np.std(rewards):.2f}")
+            print(f"Average Steps: {np.mean(steps):.1f}")
+            print(f"Average Max Height: {np.mean(head_heights):.3f}")
+            print(f"Success Rate: {sum(r > 300 for r in rewards)/len(rewards):.2%}")
+            
+        finally:
+            render_env.close()
 
     def _save_metrics(self):
         """Save evaluation metrics to a file"""
@@ -145,26 +193,47 @@ class NaoStandupSACTrainer(SACTrainer):
                 f.write("-" * 30 + "\n")
 
 def main():
-    # Initialize the trainer with custom parameters
+    parser = argparse.ArgumentParser(description='Train and evaluate SAC on NAO Standup')
+    parser.add_argument('--render', action='store_true', 
+                       help='Render the environment during evaluation')
+    parser.add_argument('--train', action='store_true',
+                       help='Train the SAC agent')
+    parser.add_argument('--evaluate', action='store_true',
+                       help='Evaluate the trained agent')
+    parser.add_argument('--episodes', type=int, default=10,
+                       help='Number of evaluation episodes')
+    
+    args = parser.parse_args()
+
+    # Initialize the trainer
     trainer = NaoStandupSACTrainer(
-        max_episodes=2000,          # Increased episodes for complex task
-        max_steps=1000,            
+        max_episodes=2000,
+        max_steps=1000,
         batch_size=256,
-        eval_interval=10,          # Evaluate every 20 episodes
+        eval_interval=10,
         updates_per_step=1,
-        start_steps=10000,         # Initial random actions for exploration
-        eval_episodes=5,           # Number of episodes for evaluation
-        render_eval=True           # Enable video recording
+        start_steps=10000,
+        eval_episodes=5,
+        render_eval=True
     )
 
-    # Train the agent
-    print("Starting SAC training for Nao Standup...")
-    trainer.train()
-    
-    # Save final model
-    final_model_path = os.path.join(trainer.save_dir, "final_model.pt")
-    trainer.agent.save(final_model_path)
-    print(f"Training completed. Final model saved to {final_model_path}")
+    if args.train:
+        print("Starting SAC training for Nao Standup...")
+        trainer.train()
+        print(f"Training completed. Final model saved to {trainer.best_model_path}")
+
+    if args.evaluate:
+        print("\nStarting evaluation phase...")
+        if os.path.exists(trainer.best_model_path):
+            trainer.agent.load(trainer.best_model_path)
+            print("Model loaded successfully!")
+            if args.render:
+                trainer.evaluate_with_render(episodes=args.episodes)
+            else:
+                trainer.evaluate_policy()
+        else:
+            print(f"Error: Model file not found at: {trainer.best_model_path}")
+            print("Please make sure you have trained the model first.")
 
     # Close environments
     trainer.env.close()

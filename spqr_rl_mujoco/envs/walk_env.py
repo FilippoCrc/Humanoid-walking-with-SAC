@@ -82,8 +82,10 @@ class NaoWalk(MujocoEnv, utils.EzPickle):
         
         # Check termination conditions
         terminated = False
-        if torso_z < 0.8 or torso_z > 2.0:  # Similar to Humanoid-v4 termination conditions
+        if torso_z < 0.1 or torso_z > 0.5:  # Similar to Humanoid-v4 termination conditions but smaller to match nao height
+        
             terminated = True
+
             reward = 0.0
 
         if self.render_mode == "human":
@@ -110,7 +112,7 @@ class NaoWalk(MujocoEnv, utils.EzPickle):
         
         # Initialize with standing pose
         qpos = np.array([
-            0.0, 0.0, 1.0,  # root position
+            0.0, 0.0, 0.3386,  # 0.3386 exact z position needed
             1.0, 0.0, 0.0, 0.0,  # root orientation (quaternion)
             # Rest of the joints initialized near zero with small noise
             *[0.0 + self.np_random.uniform(low=-c, high=c) for _ in range(self.model.nq - 7)]
