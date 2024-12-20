@@ -181,7 +181,7 @@ def main():
         updates_per_step=1,
         start_steps=10000,        # Initial random actions for exploration
         eval_episodes=5,          # Number of episodes for evaluation
-        render_eval=False          # Enable video recording
+        render_eval=True          # Enable video recording
     )
 
     # Train the agent
