@@ -60,7 +60,7 @@ class NaoStandup(MujocoEnv, utils.EzPickle):
         head_center_id = self.model.site("head_center").id
         head_center_z = data.site_xpos[head_center_id][2]
         
-        uph_cost = (head_center_z - 0) #/ self.model.opt.timestep
+        uph_cost = (head_center_z - 0) / self.model.opt.timestep
 
         quad_ctrl_cost = 0.1 * np.square(data.ctrl).sum()
         quad_impact_cost = 0.5e-6 * np.square(data.cfrc_ext).sum()

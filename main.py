@@ -7,8 +7,8 @@ import os
 
 # Define the path to the model
 MODEL_DIR = "results\sac_Humanoid-v5_1734629000"  # Change this to your model directory
-MODEL_PATH = os.path.join(MODEL_DIR, "final_model.pt")
-
+MODEL_PATH = os.path.join(MODEL_DIR, "best_model.pt")
+ENV_NAME = "Humanoid-v4"
 def main():
     parser = argparse.ArgumentParser(description='Train and evaluate SAC on BipedalWalker')
     
@@ -23,10 +23,9 @@ def main():
                        help='Number of evaluation episodes')
     
     args = parser.parse_args()
-
     # Create the trainer with default parameters
     trainer = SACTrainer(
-        env_name='Humanoid-v5',
+        env_name=ENV_NAME,
         max_episodes=20000,
         max_steps=1000,
         batch_size=256,
@@ -49,7 +48,7 @@ def main():
         
         # Set up environment with rendering if specified
         if args.render:
-            trainer.eval_env = gym.make('Humanoid-v5', render_mode='human')
+            trainer.eval_env = gym.make(ENV_NAME, render_mode='human')
         
         try:
             # Verify model file exists

@@ -26,7 +26,7 @@ class NaoStandupSACTrainer(SACTrainer):
     def __init__(
         self,
         max_episodes=1000,
-        max_steps=2500,  # Matches the max_episode_steps from environment registration
+        max_steps=1000,  # Matches the max_episode_steps from environment registration
         batch_size=256,
         eval_interval=10,
         updates_per_step=1,
@@ -148,7 +148,7 @@ def main():
     # Initialize the trainer with custom parameters
     trainer = NaoStandupSACTrainer(
         max_episodes=2000,          # Increased episodes for complex task
-        max_steps=2500,            
+        max_steps=1000,            
         batch_size=256,
         eval_interval=10,          # Evaluate every 20 episodes
         updates_per_step=1,

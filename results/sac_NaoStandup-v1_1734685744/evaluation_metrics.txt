@@ -1,0 +1,245 @@
+Episode 0:
+  Reward: 22852.95
+  Length: 2500
+  Max Head Height: 12.424
+  Impact Cost: -0.044
+  Control Cost: -1.431
+------------------------------
+Episode 1:
+  Reward: 23917.51
+  Length: 2500
+  Max Head Height: 14.291
+  Impact Cost: -0.001
+  Control Cost: -0.691
+------------------------------
+Episode 2:
+  Reward: 23139.22
+  Length: 2500
+  Max Head Height: 13.224
+  Impact Cost: -0.011
+  Control Cost: -1.301
+------------------------------
+Episode 3:
+  Reward: 22578.08
+  Length: 2500
+  Max Head Height: 12.876
+  Impact Cost: -0.028
+  Control Cost: -1.145
+------------------------------
+Episode 4:
+  Reward: 23693.61
+  Length: 2500
+  Max Head Height: 13.746
+  Impact Cost: -0.003
+  Control Cost: -1.208
+------------------------------
+Episode 5:
+  Reward: 22769.96
+  Length: 2500
+  Max Head Height: 14.083
+  Impact Cost: -0.016
+  Control Cost: -1.012
+------------------------------
+Episode 6:
+  Reward: 22700.11
+  Length: 2500
+  Max Head Height: 12.773
+  Impact Cost: -0.010
+  Control Cost: -1.004
+------------------------------
+Episode 7:
+  Reward: 22854.53
+  Length: 2500
+  Max Head Height: 13.519
+  Impact Cost: -0.001
+  Control Cost: -0.634
+------------------------------
+Episode 8:
+  Reward: 22813.31
+  Length: 2500
+  Max Head Height: 14.059
+  Impact Cost: -0.000
+  Control Cost: -0.871
+------------------------------
+Episode 9:
+  Reward: 22884.07
+  Length: 2500
+  Max Head Height: 14.220
+  Impact Cost: -0.007
+  Control Cost: -0.961
+------------------------------
+Episode 10:
+  Reward: 32070.10
+  Length: 2500
+  Max Head Height: 17.216
+  Impact Cost: -0.001
+  Control Cost: -1.257
+------------------------------
+Episode 11:
+  Reward: 34870.63
+  Length: 2500
+  Max Head Height: 17.045
+  Impact Cost: -0.004
+  Control Cost: -1.309
+------------------------------
+Episode 12:
+  Reward: 30309.72
+  Length: 2500
+  Max Head Height: 17.044
+  Impact Cost: -0.003
+  Control Cost: -1.051
+------------------------------
+Episode 13:
+  Reward: 24529.24
+  Length: 2500
+  Max Head Height: 17.853
+  Impact Cost: -0.006
+  Control Cost: -1.380
+------------------------------
+Episode 14:
+  Reward: 32262.15
+  Length: 2500
+  Max Head Height: 17.301
+  Impact Cost: -0.004
+  Control Cost: -1.125
+------------------------------
+Episode 15:
+  Reward: 24349.39
+  Length: 2500
+  Max Head Height: 15.720
+  Impact Cost: -0.001
+  Control Cost: -1.195
+------------------------------
+Episode 16:
+  Reward: 24623.73
+  Length: 2500
+  Max Head Height: 16.544
+  Impact Cost: -0.007
+  Control Cost: -0.951
+------------------------------
+Episode 17:
+  Reward: 24785.18
+  Length: 2500
+  Max Head Height: 18.264
+  Impact Cost: -0.002
+  Control Cost: -0.707
+------------------------------
+Episode 18:
+  Reward: 24433.28
+  Length: 2500
+  Max Head Height: 15.909
+  Impact Cost: -0.002
+  Control Cost: -1.320
+------------------------------
+Episode 19:
+  Reward: 24539.47
+  Length: 2500
+  Max Head Height: 16.531
+  Impact Cost: -0.001
+  Control Cost: -1.172
+------------------------------
+Episode 20:
+  Reward: 26413.24
+  Length: 2500
+  Max Head Height: 17.896
+  Impact Cost: -0.002
+  Control Cost: -1.157
+------------------------------
+Episode 21:
+  Reward: 26264.32
+  Length: 2500
+  Max Head Height: 17.968
+  Impact Cost: -0.001
+  Control Cost: -1.190
+------------------------------
+Episode 22:
+  Reward: 28250.41
+  Length: 2500
+  Max Head Height: 21.213
+  Impact Cost: -0.001
+  Control Cost: -1.108
+------------------------------
+Episode 23:
+  Reward: 26328.31
+  Length: 2500
+  Max Head Height: 17.617
+  Impact Cost: -0.001
+  Control Cost: -0.918
+------------------------------
+Episode 24:
+  Reward: 27998.31
+  Length: 2500
+  Max Head Height: 21.118
+  Impact Cost: -0.002
+  Control Cost: -1.225
+------------------------------
+Episode 25:
+  Reward: 63284.87
+  Length: 2500
+  Max Head Height: 26.485
+  Impact Cost: -0.001
+  Control Cost: -1.140
+------------------------------
+Episode 26:
+  Reward: 64184.34
+  Length: 2500
+  Max Head Height: 26.474
+  Impact Cost: -0.001
+  Control Cost: -1.124
+------------------------------
+Episode 27:
+  Reward: 64657.39
+  Length: 2500
+  Max Head Height: 26.480
+  Impact Cost: -0.001
+  Control Cost: -1.150
+------------------------------
+Episode 28:
+  Reward: 63277.79
+  Length: 2500
+  Max Head Height: 26.465
+  Impact Cost: -0.001
+  Control Cost: -1.162
+------------------------------
+Episode 29:
+  Reward: 64055.59
+  Length: 2500
+  Max Head Height: 26.485
+  Impact Cost: -0.001
+  Control Cost: -1.139
+------------------------------
+Episode 30:
+  Reward: 65320.46
+  Length: 2500
+  Max Head Height: 26.627
+  Impact Cost: -0.001
+  Control Cost: -1.084
+------------------------------
+Episode 31:
+  Reward: 65598.96
+  Length: 2500
+  Max Head Height: 26.617
+  Impact Cost: -0.001
+  Control Cost: -1.111
+------------------------------
+Episode 32:
+  Reward: 65577.33
+  Length: 2500
+  Max Head Height: 26.617
+  Impact Cost: -0.001
+  Control Cost: -1.111
+------------------------------
+Episode 33:
+  Reward: 65179.84
+  Length: 2500
+  Max Head Height: 26.627
+  Impact Cost: -0.001
+  Control Cost: -1.105
+------------------------------
+Episode 34:
+  Reward: 65638.35
+  Length: 2500
+  Max Head Height: 26.641
+  Impact Cost: -0.001
+  Control Cost: -1.094
+------------------------------
