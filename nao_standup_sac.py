@@ -7,13 +7,13 @@ from gymnasium.wrappers import RecordVideo
 import time
 import argparse
 
-# Configure MuJoCo with EGL backend if GPU is available
-if torch.cuda.is_available():
-    NVIDIA_ICD_CONFIG_PATH = "/usr/share/glvnd/egl_vendor.d/10_nvidia.json"
-    if not os.path.exists(NVIDIA_ICD_CONFIG_PATH):
-        with open(NVIDIA_ICD_CONFIG_PATH, "w") as f:
-            f.write("""{"file_format_version": "1.0.0", "ICD": {"library_path": "libEGL_nvidia.so.0"}}""")
-    os.environ["MUJOCO_GL"] = "egl"
+
+# # Configure MuJoCo with EGL backend if GPU is available
+# if torch.cuda.is_available():
+#     NVIDIA_ICD_CONFIG_PATH = "/usr/share/glvnd/egl_vendor.d/10_nvidia.json"
+#     if not os.path.exists(NVIDIA_ICD_CONFIG_PATH):
+#         with open(NVIDIA_ICD_CONFIG_PATH, "w") as f:
+#             f.write("""{"file_format_version": "1.0.0", "ICD": {"library_path": "libEGL_nvidia.so.0"}}""")
 
 def capped_cubic_video_schedule(episode_id: int) -> bool:
     """Video recording schedule for evaluation"""
@@ -207,8 +207,8 @@ def main():
 
     # Initialize the trainer
     trainer = NaoStandupSACTrainer(
-        max_episodes=2000,
-        max_steps=1000,
+        max_episodes=1000,
+        max_steps=1500,
         batch_size=256,
         eval_interval=10,
         updates_per_step=1,
