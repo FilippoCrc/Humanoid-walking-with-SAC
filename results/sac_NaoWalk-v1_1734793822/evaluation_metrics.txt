@@ -4198,3 +4198,153 @@ Episode 419:
   Contact Cost: -0.000
   Alive Bonus: 2.000
 ------------------------------
+Episode 420:
+  Reward: 300.41
+  Length: 164
+  Distance: 0.013
+  Average Velocity: 0.000
+  Forward Reward: 0.948
+  Control Cost: -0.121
+  Contact Cost: -0.000
+  Alive Bonus: 2.000
+------------------------------
+Episode 421:
+  Reward: 1813.15
+  Length: 1000
+  Distance: -2.441
+  Average Velocity: -0.002
+  Forward Reward: 0.039
+  Control Cost: -0.124
+  Contact Cost: -0.001
+  Alive Bonus: 2.000
+------------------------------
+Episode 422:
+  Reward: 154.89
+  Length: 89
+  Distance: -0.484
+  Average Velocity: -0.005
+  Forward Reward: -0.676
+  Control Cost: -0.154
+  Contact Cost: -0.043
+  Alive Bonus: 2.000
+------------------------------
+Episode 423:
+  Reward: 271.18
+  Length: 151
+  Distance: -0.432
+  Average Velocity: -0.003
+  Forward Reward: -0.649
+  Control Cost: -0.182
+  Contact Cost: -0.001
+  Alive Bonus: 2.000
+------------------------------
+Episode 424:
+  Reward: 167.76
+  Length: 91
+  Distance: 0.122
+  Average Velocity: 0.001
+  Forward Reward: 1.002
+  Control Cost: -0.148
+  Contact Cost: -0.000
+  Alive Bonus: 2.000
+------------------------------
+Episode 425:
+  Reward: 206.50
+  Length: 116
+  Distance: -0.440
+  Average Velocity: -0.004
+  Forward Reward: -0.711
+  Control Cost: -0.126
+  Contact Cost: -0.000
+  Alive Bonus: 2.000
+------------------------------
+Episode 426:
+  Reward: 151.93
+  Length: 82
+  Distance: 0.144
+  Average Velocity: 0.002
+  Forward Reward: 0.941
+  Control Cost: -0.123
+  Contact Cost: -0.011
+  Alive Bonus: 2.000
+------------------------------
+Episode 427:
+  Reward: 142.05
+  Length: 77
+  Distance: 0.102
+  Average Velocity: 0.001
+  Forward Reward: 0.709
+  Control Cost: -0.128
+  Contact Cost: -0.000
+  Alive Bonus: 2.000
+------------------------------
+Episode 428:
+  Reward: 593.00
+  Length: 320
+  Distance: 0.146
+  Average Velocity: 0.000
+  Forward Reward: 0.819
+  Control Cost: -0.112
+  Contact Cost: -0.000
+  Alive Bonus: 2.000
+------------------------------
+Episode 429:
+  Reward: 814.31
+  Length: 440
+  Distance: -0.014
+  Average Velocity: -0.000
+  Forward Reward: 0.273
+  Control Cost: -0.137
+  Contact Cost: -0.004
+  Alive Bonus: 2.000
+------------------------------
+Episode 430:
+  Reward: 120.09
+  Length: 65
+  Distance: 0.132
+  Average Velocity: 0.002
+  Forward Reward: 0.772
+  Control Cost: -0.116
+  Contact Cost: -0.000
+  Alive Bonus: 2.000
+------------------------------
+Episode 431:
+  Reward: 281.00
+  Length: 150
+  Distance: 0.262
+  Average Velocity: 0.002
+  Forward Reward: 0.849
+  Control Cost: -0.141
+  Contact Cost: -0.008
+  Alive Bonus: 2.000
+------------------------------
+Episode 432:
+  Reward: 1570.80
+  Length: 851
+  Distance: -0.278
+  Average Velocity: -0.000
+  Forward Reward: 0.606
+  Control Cost: -0.106
+  Contact Cost: -0.002
+  Alive Bonus: 2.000
+------------------------------
+Episode 433:
+  Reward: 100.98
+  Length: 58
+  Distance: -0.287
+  Average Velocity: -0.005
+  Forward Reward: -0.550
+  Control Cost: -0.151
+  Contact Cost: -0.002
+  Alive Bonus: 2.000
+------------------------------
+Episode 434:
+  Reward: 513.02
+  Length: 280
+  Distance: -0.301
+  Average Velocity: -0.001
+  Forward Reward: 0.175
+  Control Cost: -0.177
+  Contact Cost: -0.000
+  Alive Bonus: 2.000
+------------------------------
