@@ -19,7 +19,7 @@ class SAC:
         lr=3e-4,
         alpha=0.2,
         automatic_entropy_tuning=True,
-        use_per=False,   # New parameter to toggle PER
+        use_per=True,   # New parameter to toggle PER
         device="cuda" if torch.cuda.is_available() else "cpu"
     ):
         
@@ -95,18 +95,22 @@ class SAC:
             
             
     def update_parameters(self, batch_size=256):
-        """Update the networks using a batch of experiences"""
-
+        """
+        Update the networks using a batch of experiences with PER support
+        Returns dict with loss values for logging
+        """
         # Sample a batch from replay buffer
         if self.use_per:
-            state_batch, action_batch, reward_batch, next_state_batch, done_batch, indices, weights = self.replay_buffer.sample(batch_size)
-            # Convert weights to tensor
-            weights = torch.FloatTensor(weights).to(self.device)
+            state_batch, action_batch, reward_batch, next_state_batch, done_batch, indices, weights = \
+                self.replay_buffer.sample(batch_size)
+            # Convert weights to tensor and ensure proper shape
+            weights = torch.FloatTensor(weights).to(self.device).reshape(-1, 1)
         else:
-            state_batch, action_batch, reward_batch, next_state_batch, done_batch = self.replay_buffer.sample(batch_size)
+            state_batch, action_batch, reward_batch, next_state_batch, done_batch = \
+                self.replay_buffer.sample(batch_size)
             weights = 1.0
 
-        # Convert to tensors
+        # Convert numpy arrays to tensors
         state_batch = torch.FloatTensor(state_batch).to(self.device)
         action_batch = torch.FloatTensor(action_batch).to(self.device)
         reward_batch = torch.FloatTensor(reward_batch).unsqueeze(1).to(self.device)
@@ -114,47 +118,67 @@ class SAC:
         done_batch = torch.FloatTensor(done_batch).unsqueeze(1).to(self.device)
 
         with torch.no_grad():
-            # Sample next actions and their log probs for next states
+            # Sample next actions and their log probs from the policy
             next_actions, next_log_probs = self.policy.sample(next_state_batch)
-            
-            # Calculate target Q-values
+        
+            # Compute target Q values
             q1_next = self.q1_target(next_state_batch, next_actions)
             q2_next = self.q2_target(next_state_batch, next_actions)
             q_next = torch.min(q1_next, q2_next)
-            
+        
             # Calculate target including entropy term
             value_target = q_next - self.alpha * next_log_probs
             q_target = reward_batch + (1 - done_batch) * self.gamma * value_target
 
-        # Calculate TD errors for priority updates
-        if self.use_per:
-            with torch.no_grad():
-                td_error = torch.abs(self.q1(state_batch, action_batch) - q_target)
-                self.replay_buffer.update_priorities(indices, td_error.cpu().numpy())
-
         # Update Q-Networks
+        # Current Q-values
         q1_pred = self.q1(state_batch, action_batch)
         q2_pred = self.q2(state_batch, action_batch)
-        
-        q1_loss = F.mse_loss(q1_pred, q_target)
-        q2_loss = F.mse_loss(q2_pred, q_target)
 
+        # Calculate TD errors and losses with importance sampling weights if using PER
+        if self.use_per:
+            td_error1 = F.mse_loss(q1_pred, q_target, reduction='none')
+            td_error2 = F.mse_loss(q2_pred, q_target, reduction='none')
+        
+            # Apply importance sampling weights to losses
+            q1_loss = (weights * td_error1).mean()
+            q2_loss = (weights * td_error2).mean()
+        
+            # Calculate priorities for buffer update
+            with torch.no_grad():
+                td_errors = torch.max(torch.abs(td_error1), torch.abs(td_error2))
+                self.replay_buffer.update_priorities(indices, td_errors)
+        else:
+            # Regular Q-learning losses without PER
+            q1_loss = F.mse_loss(q1_pred, q_target)
+            q2_loss = F.mse_loss(q2_pred, q_target)
+
+        # Update first Q-network
         self.q1_optimizer.zero_grad()
         q1_loss.backward()
         self.q1_optimizer.step()
 
+        # Update second Q-network
         self.q2_optimizer.zero_grad()
         q2_loss.backward()
         self.q2_optimizer.step()
 
-        # Update Policy
+        # Update Policy Network
+        # Sample actions and log probs from current policy
         new_actions, log_probs = self.policy.sample(state_batch)
+    
+        # Calculate Q-values for new actions
         q1_new = self.q1(state_batch, new_actions)
         q2_new = self.q2(state_batch, new_actions)
         q_new = torch.min(q1_new, q2_new)
 
-        policy_loss = (self.alpha * log_probs - q_new).mean()
+        # Policy loss with importance sampling weights if using PER
+        if self.use_per:
+            policy_loss = (weights * (self.alpha * log_probs - q_new)).mean()
+        else:
+            policy_loss = (self.alpha * log_probs - q_new).mean()
 
+        # Update policy network
         self.policy_optimizer.zero_grad()
         policy_loss.backward()
         self.policy_optimizer.step()
@@ -162,7 +186,7 @@ class SAC:
         # Update temperature parameter if automatic entropy tuning is enabled
         if self.automatic_entropy_tuning:
             alpha_loss = -(self.log_alpha * (log_probs + self.target_entropy).detach()).mean()
-            
+        
             self.alpha_optimizer.zero_grad()
             alpha_loss.backward()
             self.alpha_optimizer.step()
@@ -175,7 +199,9 @@ class SAC:
         return {
             'q1_loss': q1_loss.item(),
             'q2_loss': q2_loss.item(),
-            'policy_loss': policy_loss.item()
+            'policy_loss': policy_loss.item(),
+            'alpha_loss': alpha_loss.item() if self.automatic_entropy_tuning else 0.0,
+            'alpha': self.alpha.item() if self.automatic_entropy_tuning else self.alpha
         }
 
     def _soft_update_target_networks(self):

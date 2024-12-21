@@ -6,7 +6,7 @@ import torch
 import os
 
 # Define the path to the model
-MODEL_DIR = "results\sac_Humanoid-v4_1734645860"  # Change this to your model directory
+MODEL_DIR = "results\sac_Humanoid-v4_1734702288"  # Change this to your model directory
 MODEL_PATH = os.path.join(MODEL_DIR, "best_model.pt")
 NAME_ENV = "Humanoid-v4"
 

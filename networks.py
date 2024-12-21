@@ -2,6 +2,14 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
+from torch.distributions import Normal
+
+# to ensure stability of neural networks learning
+MAX_LOG_STD = 2
+MIN_LOG_STD = -20
+EPS = 1e-6
+# absolute bounds for weights initialization
+INIT_WEIGHT = 1E-2
 
 class QNetwork(nn.Module):
     """
@@ -14,8 +22,8 @@ class QNetwork(nn.Module):
         # First layer processes both state and action together
         self.fc1 = nn.Linear(state_dim + action_dim, hidden_dim)
         self.fc2 = nn.Linear(hidden_dim, hidden_dim)
-        self.fc3 = nn.Linear(hidden_dim, hidden_dim // 2)  # Added extra layer
-        self.fc4 = nn.Linear(hidden_dim // 2, 1) # Output single Q-value
+        self.fc3 = nn.Linear(hidden_dim, hidden_dim)  # Added extra layer
+        self.fc4 = nn.Linear(hidden_dim, 1) # Output single Q-value
         
         # Initialize weights with small values for stability
         self.apply(self._init_weights)
@@ -46,10 +54,10 @@ class GaussianPolicy(nn.Module):
         # Neural network layers
         self.fc1 = nn.Linear(state_dim, hidden_dim)
         self.fc2 = nn.Linear(hidden_dim, hidden_dim)
-        self.fc3 = nn.Linear(hidden_dim, hidden_dim // 2)
+        self.fc3 = nn.Linear(hidden_dim, hidden_dim)
         
-        self.mean = nn.Linear(hidden_dim // 2, action_dim)
-        self.log_std = nn.Linear(hidden_dim // 2, action_dim)
+        self.mean = nn.Linear(hidden_dim, action_dim)
+        self.log_std = nn.Linear(hidden_dim, action_dim)
         
         # Store action bounds for scaling
         if action_bounds is None:
@@ -88,28 +96,27 @@ class GaussianPolicy(nn.Module):
         return mean, log_std
 
     def sample(self, state):
+        """
+        Sample actions from the Gaussian policy using the reparameterization trick.
+        Returns the sampled action and its log probability.
+        """
         mean, log_std = self.forward(state)
         std = log_std.exp()
         
-        # Use reparameterization trick for backpropagation
+        # Sample from normal distribution
         normal = torch.distributions.Normal(mean, std)
-        x_t = normal.rsample()  # Sample from the normal distribution
+        x_t = normal.rsample()  # Use reparameterization trick
         
-        # Apply tanh squashing to bound actions
+        # Apply tanh squashing and scale to action bounds
         y_t = torch.tanh(x_t)
-        
-        # Scale and shift the tanh output to match the desired action range
         action = y_t * self.action_scale + self.action_bias
         
-        # Compute log probability, accounting for the action transformation
+        # Compute log probability, accounting for tanh squashing
         log_prob = normal.log_prob(x_t)
-        
-        # Account for tanh squashing in log probability using the change of variables formula
         log_prob -= torch.log(self.action_scale * (1 - y_t.pow(2)) + 1e-6)
         log_prob = log_prob.sum(dim=-1, keepdim=True)
         
-        return action, log_prob
-
+        return action, log_prob 
 """ class ValueNetwork(nn.Module):
     
     #Optional Value Network for SAC. Some implementations use this instead of double Q-networks.

@@ -71,7 +71,7 @@ class SACTrainer:
             lr=3e-4,
             alpha=0.2,
             automatic_entropy_tuning=True,
-            use_per=False,       # PER is disabled by default
+            use_per=True,       # PER is disabled by default
             device=self.device
         )
         
