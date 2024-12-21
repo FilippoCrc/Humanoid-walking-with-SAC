@@ -5,6 +5,7 @@ import numpy as np
 from trainer import SACTrainer
 from gymnasium.wrappers import RecordVideo
 import time
+import argparse
 
 # Configure MuJoCo with EGL backend if GPU is available
 if torch.cuda.is_available():
@@ -16,20 +17,20 @@ if torch.cuda.is_available():
 
 def capped_cubic_video_schedule(episode_id: int) -> bool:
     """Video recording schedule for evaluation"""
-    return episode_id % 5 == 0  # Record every 40 episodes
-
+    return episode_id % 10 == 0  
+MODEL_PATH_EVAL = "results\sac_NaoWalk-v1_1734781102/best_model.pt"
 class NaoWalkSACTrainer(SACTrainer):
-    """Extended SACTrainer specifically for Nao Walking environment"""
     def __init__(
         self,
         max_episodes=1000,
         max_steps=1000,
         batch_size=256,
-        eval_interval=10,
+        eval_interval=20,
         updates_per_step=1,
         start_steps=10000,
         eval_episodes=5,
-        render_eval=False
+        render_eval=True,
+        model_dir="results/sac_nao_walk"
     ):
         # Register the environment
         gym.register(
@@ -38,6 +39,9 @@ class NaoWalkSACTrainer(SACTrainer):
             max_episode_steps=1000,
         )
 
+        self.model_dir = model_dir
+        self.best_model_path = os.path.join(model_dir, "best_model.pt")
+        
         # Initialize parent class with Nao environment
         super().__init__(
             env_name="NaoWalk-v1",
@@ -53,7 +57,6 @@ class NaoWalkSACTrainer(SACTrainer):
         # Create video directory
         self.video_dir = f"videos/sac_nao_walk_{int(time.time())}"
         os.makedirs(self.video_dir, exist_ok=True)
-        self.render_eval = render_eval
 
         # Create two separate evaluation environments
         self.eval_env = gym.make("NaoWalk-v1")  # Clean env for evaluation
@@ -72,11 +75,11 @@ class NaoWalkSACTrainer(SACTrainer):
         self.episode_metrics = []
 
     def evaluate_policy(self):
-        """Override evaluation to include walking-specific metrics"""
+        """Evaluation method used during training"""
         eval_rewards = []
         eval_lengths = []
-        forward_distances = []  # Track distance traveled
-        avg_velocities = []    # Track average velocity
+        forward_distances = []
+        avg_velocities = []
         
         for eval_ep in range(self.eval_episodes):
             state, _ = self.eval_env.reset()
@@ -85,12 +88,11 @@ class NaoWalkSACTrainer(SACTrainer):
             start_x = None
             done = False
             
-            while not done and episode_steps < self.max_steps:
+            while not done:
                 action = self.agent.select_action(state, evaluate=True)
                 next_state, reward, terminated, truncated, info = self.eval_env.step(action)
                 done = terminated or truncated
                 
-                # Track position and velocity
                 if start_x is None and 'x_position' in info:
                     start_x = info['x_position']
                 
@@ -98,7 +100,6 @@ class NaoWalkSACTrainer(SACTrainer):
                 episode_steps += 1
                 state = next_state
             
-            # Calculate distance and velocity metrics
             total_distance = info['x_position'] - start_x if start_x is not None else 0
             avg_velocity = total_distance / episode_steps if episode_steps > 0 else 0
             
@@ -107,7 +108,7 @@ class NaoWalkSACTrainer(SACTrainer):
             forward_distances.append(total_distance)
             avg_velocities.append(avg_velocity)
 
-            # Store episode metrics
+            # Store metrics
             self.episode_metrics.append({
                 'episode': len(self.episode_metrics),
                 'reward': episode_reward,
@@ -120,10 +121,9 @@ class NaoWalkSACTrainer(SACTrainer):
                 'alive_bonus': info.get('reward_alive', 0)
             })
 
-            # Record successful episodes if video environment exists
-            if self.render_eval :  # Threshold for "good" episodes
+            # Record video if configured
+            if self.video_env is not None:
                 try:
-                    # Run the same episode in the video environment
                     video_state, _ = self.video_env.reset()
                     video_done = False
                     video_steps = 0
@@ -134,7 +134,7 @@ class NaoWalkSACTrainer(SACTrainer):
                         video_done = video_terminated or video_truncated
                         video_steps += 1
                 except Exception as e:
-                    print(f"Warning: Failed to record video for successful episode: {e}")
+                    print(f"Warning: Failed to record video: {e}")
 
         mean_reward = np.mean(eval_rewards)
         std_reward = np.std(eval_rewards)
@@ -143,18 +143,73 @@ class NaoWalkSACTrainer(SACTrainer):
 
         if self.debug_config['print_eval_summary']:
             print(f"\n{'='*50}")
-            print(f"Evaluation Summary:")
+            print(f"Training Evaluation Summary:")
             print(f"Mean Reward: {mean_reward:.2f} ± {std_reward:.2f}")
             print(f"Mean Episode Length: {np.mean(eval_lengths):.1f}")
-            print(f"Mean Distance Traveled: {mean_distance:.3f}")
+            print(f"Mean Distance: {mean_distance:.3f}")
             print(f"Mean Velocity: {mean_velocity:.3f}")
             print(f"Success Rate: {sum(d > 1.0 for d in forward_distances)/len(forward_distances):.2%}")
             print(f"{'='*50}")
 
-        # Save metrics to file
         self._save_metrics()
-
         return mean_reward, std_reward
+
+    def evaluate_with_render(self, episodes=10):
+        """Separate evaluation method with human rendering for visual inspection"""
+        print("\nStarting human-rendered evaluation...")
+        
+        # Create a new environment with human rendering
+        render_env = gym.make("NaoWalk-v1", render_mode='human')
+        
+        rewards = []
+        steps = []
+        distances = []
+        velocities = []
+        
+        try:
+            for episode in range(episodes):
+                state, _ = render_env.reset()
+                episode_reward = 0
+                episode_steps = 0
+                start_x = None
+                done = False
+                
+                while not done:
+                    action = self.agent.select_action(state, evaluate=True)
+                    next_state, reward, terminated, truncated, info = render_env.step(action)
+                    done = terminated or truncated
+                    
+                    if start_x is None and 'x_position' in info:
+                        start_x = info['x_position']
+                    
+                    episode_reward += reward
+                    episode_steps += 1
+                    state = next_state
+                
+                total_distance = info['x_position'] - start_x if start_x is not None else 0
+                avg_velocity = total_distance / episode_steps if episode_steps > 0 else 0
+                
+                rewards.append(episode_reward)
+                steps.append(episode_steps)
+                distances.append(total_distance)
+                velocities.append(avg_velocity)
+                
+                print(f"Episode {episode + 1}/{episodes} - "
+                      f"Reward: {episode_reward:.2f} - "
+                      f"Steps: {episode_steps} - "
+                      f"Distance: {total_distance:.3f} - "
+                      f"Velocity: {avg_velocity:.3f}")
+            
+            # Print evaluation summary
+            print("\nHuman Render Evaluation Summary:")
+            print(f"Average Reward: {np.mean(rewards):.2f} ± {np.std(rewards):.2f}")
+            print(f"Average Steps: {np.mean(steps):.1f}")
+            print(f"Average Distance: {np.mean(distances):.3f}")
+            print(f"Average Velocity: {np.mean(velocities):.3f}")
+            print(f"Success Rate: {sum(d > 1.0 for d in distances)/len(distances):.2%}")
+            
+        finally:
+            render_env.close()
 
     def _save_metrics(self):
         """Save evaluation metrics to a file"""
@@ -171,27 +226,53 @@ class NaoWalkSACTrainer(SACTrainer):
                 f.write(f"  Contact Cost: {metric['contact_cost']:.3f}\n")
                 f.write(f"  Alive Bonus: {metric['alive_bonus']:.3f}\n")
                 f.write("-" * 30 + "\n")
+
 def main():
-    # Initialize the trainer with custom parameters
+    parser = argparse.ArgumentParser(description='Train and evaluate SAC on NAO Walking')
+    parser.add_argument('--render', action='store_true', 
+                       help='Render the environment during evaluation')
+    parser.add_argument('--train', action='store_true',
+                       help='Train the SAC agent')
+    parser.add_argument('--evaluate', action='store_true',
+                       help='Evaluate the trained agent')
+    parser.add_argument('--episodes', type=int, default=10,
+                       help='Number of evaluation episodes')
+    parser.add_argument('--model-path', type=str, default=None,
+                       help='Path to load a specific model for evaluation')
+    
+    args = parser.parse_args()
+
+    # Initialize the trainer
     trainer = NaoWalkSACTrainer(
-        max_episodes=20000,        # Training episodes
-        max_steps=1000,           # Steps per episode
+        max_episodes=20000,
+        max_steps=1000,
         batch_size=256,
-        eval_interval=10,         # Evaluate every 10 episodes
+        eval_interval=20,
         updates_per_step=1,
-        start_steps=10000,        # Initial random actions for exploration
-        eval_episodes=5,          # Number of episodes for evaluation
-        render_eval=True          # Enable video recording
+        start_steps=0,
+        eval_episodes=5,
+        render_eval=True
     )
 
-    # Train the agent
-    print("Starting SAC training for Nao Walking...")
-    trainer.train()
-    
-    # Save final model
-    final_model_path = os.path.join(trainer.save_dir, "final_model.pt")
-    trainer.agent.save(final_model_path)
-    print(f"Training completed. Final model saved to {final_model_path}")
+    if args.train:
+        print("Starting SAC training for Nao Walking...")
+        trainer.train()
+        print(f"Training completed. Final model saved to {trainer.best_model_path}")
+
+    if args.evaluate:
+        print("\nStarting evaluation phase...")
+        model_path = MODEL_PATH_EVAL
+        
+        if os.path.exists(model_path):
+            trainer.agent.load(model_path)
+            print(f"Model loaded successfully from {model_path}!")
+            if args.render:
+                trainer.evaluate_with_render(episodes=args.episodes)
+            else:
+                trainer.evaluate_policy()
+        else:
+            print(f"Error: Model file not found at: {model_path}")
+            print("Please make sure you have trained the model first or provide a valid model path.")
 
     # Close environments
     trainer.env.close()

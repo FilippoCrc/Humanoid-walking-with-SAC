@@ -74,18 +74,22 @@ class SAC:
         self.replay_buffer = ReplayBuffer()
 
     def select_action(self, state, evaluate=False):
-        """Select an action from the policy"""
         state = torch.FloatTensor(state).unsqueeze(0).to(self.device)
         
         if evaluate:
             # During evaluation, use the mean action without sampling
             with torch.no_grad():
                 mean, _ = self.policy(state)
-                return torch.tanh(mean).cpu().numpy()[0]
+                action = torch.tanh(mean)  # Apply tanh
+                # Add this line to properly scale the actions
+                action = action * self.policy.action_scale + self.policy.action_bias
+                #print("action choosen during eval",action.cpu().numpy()[0])
+                return action.cpu().numpy()[0]
         else:
             # During training, sample from the policy
             with torch.no_grad():
                 action, _ = self.policy.sample(state)
+                #print("action choosen during training",action.cpu().numpy()[0])
                 return action.cpu().numpy()[0]
 
     def update_parameters(self, batch_size=256):
