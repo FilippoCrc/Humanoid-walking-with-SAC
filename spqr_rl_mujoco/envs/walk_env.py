@@ -67,8 +67,8 @@ class NaoWalk(MujocoEnv, utils.EzPickle):
         # Get z position of torso
         torso_z = data.qpos[2]
         
-        # Calculate alive bonus (similar to Humanoid-v4)
-        alive_bonus = 5.0
+        # Calculate aliv bonus (similar to Humanoid-v4)
+        alive_bonus = 2 #this value must be a lot lower becouse the robot stays on balance much easier, in mujoco it's 5
         
         # Calculate rewards components (similar to Humanoid-v4)
         reward_forward = forward_vel
@@ -80,12 +80,30 @@ class NaoWalk(MujocoEnv, utils.EzPickle):
         # Combine rewards
         reward = reward_forward + reward_alive + reward_ctrl + reward_contact
         
-        # Check termination conditions
-        terminated = False
-        if torso_z < 0.1 or torso_z > 0.5:  # Similar to Humanoid-v4 termination conditions but smaller to match nao height
         
-            terminated = True
+        quat = data.qpos[3:7]
+        # Convert quaternion to euler angles
+        # Roll (x-axis rotation)
+        sinr_cosp = 2.0 * (quat[0] * quat[1] + quat[2] * quat[3])
+        cosr_cosp = 1.0 - 2.0 * (quat[1] * quat[1] + quat[2] * quat[2])
+        roll = np.arctan2(sinr_cosp, cosr_cosp)
 
+        # Pitch (y-axis rotation)
+        sinp = 2.0 * (quat[0] * quat[2] - quat[3] * quat[1])
+        if abs(sinp) >= 1:
+            pitch = np.sign(sinp) * np.pi / 2
+        else:
+            pitch = np.arcsin(sinp)
+        
+        # Check both height and orientation
+   # Check termination conditions
+        terminated = False
+        if (torso_z < 0.20 or torso_z > 0.5 or  # height check
+            abs(roll) > 1.0 or    # roll > ~57 degrees
+            abs(pitch) > 1.0):    # pitch > ~57 degrees
+            print("roll",abs(roll))
+            print("pitch",abs(pitch))
+            terminated = True
             reward = 0.0
 
         if self.render_mode == "human":
@@ -107,23 +125,62 @@ class NaoWalk(MujocoEnv, utils.EzPickle):
         )
 
     def reset_model(self):
-        # Similar to Humanoid-v4 initial position
-        c = 0.01  # noise scaling factor
+        c = 0.01  # small noise scaling factor
         
-        # Initialize with standing pose
-        qpos = np.array([
-            0.0, 0.0, 0.3386,  # 0.3386 exact z position needed
-            1.0, 0.0, 0.0, 0.0,  # root orientation (quaternion)
-            # Rest of the joints initialized near zero with small noise
-            *[0.0 + self.np_random.uniform(low=-c, high=c) for _ in range(self.model.nq - 7)]
-        ])
+       
         
-        qvel = np.array([
-            0.0, 0.0, 0.0,  # root linear velocity
-            0.0, 0.0, 0.0,  # root angular velocity
-            # Rest of the joint velocities initialized with small noise
-            *[0.0 + self.np_random.uniform(low=-c, high=c) for _ in range(self.model.nv - 6)]
-        ])
+        # Standing keyframe with 33 positions (31 + 2 for the missing joints)
+        standing_keyframe_qpos = [
+            0.0,
+            0.0,
+            0.3464,
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            -0.000571484,
+            0.0239414,
+            0.000401842,
+            -3.89047e-05,
+            -0.00175077,
+            0.357233,
+            0.0114063,
+            0.000212495,
+            0.000422366,
+            3.92127e-05,
+            -0.00133669,
+            0.356939,
+            0.0112884,
+            -0.000206283,
+            1.46985,
+            0.110264,
+            0.000766453,
+            -0.034298,
+            3.65047e-05,
+            1.47067,
+            -0.110094,
+            -0.00201064,
+            0.0342998,
+            -0.00126886,
+           
+           
+        ]
         
-        self.set_state(qpos, qvel)
+        
+        
+        # Convert to numpy array and add noise
+        noisy_qpos = np.array(standing_keyframe_qpos) + self.np_random.uniform(
+            low=-c,
+            high=c,
+            size=self.model.nq
+        )
+        
+        # Initialize velocities as numpy array
+        qvel = self.np_random.uniform(
+            low=-c,
+            high=c,
+            size=self.model.nv
+        )
+        
+        self.set_state(noisy_qpos, qvel)
         return self._get_obs()
