@@ -101,8 +101,7 @@ class NaoWalk(MujocoEnv, utils.EzPickle):
         if (torso_z < 0.20 or torso_z > 0.5 or  # height check
             abs(roll) > 1.0 or    # roll > ~57 degrees
             abs(pitch) > 1.0):    # pitch > ~57 degrees
-            print("roll",abs(roll))
-            print("pitch",abs(pitch))
+            
             terminated = True
             reward = 0.0
 
