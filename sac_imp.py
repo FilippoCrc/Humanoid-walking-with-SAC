@@ -74,6 +74,7 @@ class SAC:
         self.replay_buffer = ReplayBuffer()
 
     def select_action(self, state, evaluate=False):
+        """Select an action from the input state"""
         state = torch.FloatTensor(state).unsqueeze(0).to(self.device)
         
         if evaluate:
@@ -175,7 +176,7 @@ class SAC:
             target_param.data.copy_(
                 target_param.data * (1.0 - self.tau) + param.data * self.tau
             )
-
+            
     def save(self, path):
         """Save the model parameters"""
         torch.save({
@@ -196,3 +197,65 @@ class SAC:
         self.q1_target.load_state_dict(checkpoint['q1_target_state_dict'])
         self.q2_target.load_state_dict(checkpoint['q2_target_state_dict'])
         self.alpha = checkpoint['alpha']
+
+    """------------------------- NEW CODE ADDED FOR THE CHECKPOINT FUNCTIONALITY -DATE:22/12/2024 --------------------------"""
+    def save_checkpoint(self, path, episode, total_steps, replay_buffer=True):
+        """Enhanced save method that includes training state"""
+        checkpoint = {
+            'episode': episode,
+            'total_steps': total_steps,
+            'policy_state_dict': self.policy.state_dict(),
+            'q1_state_dict': self.q1.state_dict(),
+            'q2_state_dict': self.q2.state_dict(),
+            'q1_target_state_dict': self.q1_target.state_dict(),
+            'q2_target_state_dict': self.q2_target.state_dict(),
+            'policy_optimizer_state_dict': self.policy_optimizer.state_dict(),
+            'q1_optimizer_state_dict': self.q1_optimizer.state_dict(),
+            'q2_optimizer_state_dict': self.q2_optimizer.state_dict(),
+            'alpha': self.alpha
+        }
+    
+        # Save automatic entropy tuning parameters if enabled
+        if self.automatic_entropy_tuning:
+            checkpoint['log_alpha'] = self.log_alpha
+            checkpoint['alpha_optimizer_state_dict'] = self.alpha_optimizer.state_dict()
+    
+        # Optionally save replay buffer
+        if replay_buffer:
+            checkpoint['replay_buffer'] = self.replay_buffer.buffer
+    
+            torch.save(checkpoint, path)
+
+    def load_checkpoint(self, path, load_replay_buffer=True):
+        """Enhanced load method that restores training state"""
+        checkpoint = torch.load(path)
+    
+        # Load network states
+        self.policy.load_state_dict(checkpoint['policy_state_dict'])
+        self.q1.load_state_dict(checkpoint['q1_state_dict'])
+        self.q2.load_state_dict(checkpoint['q2_state_dict'])
+        self.q1_target.load_state_dict(checkpoint['q1_target_state_dict'])
+        self.q2_target.load_state_dict(checkpoint['q2_target_state_dict'])
+    
+        # Load optimizer states if they exist
+        if 'policy_optimizer_state_dict' in checkpoint:
+            self.policy_optimizer.load_state_dict(checkpoint['policy_optimizer_state_dict'])
+        if 'q1_optimizer_state_dict' in checkpoint:
+            self.q1_optimizer.load_state_dict(checkpoint['q1_optimizer_state_dict'])
+        if 'q2_optimizer_state_dict' in checkpoint:
+            self.q2_optimizer.load_state_dict(checkpoint['q2_optimizer_state_dict'])
+    
+        # Load alpha and entropy tuning parameters
+        self.alpha = checkpoint['alpha']
+        if self.automatic_entropy_tuning and 'log_alpha' in checkpoint:
+            self.log_alpha = checkpoint['log_alpha']
+        if 'alpha_optimizer_state_dict' in checkpoint:
+            self.alpha_optimizer.load_state_dict(checkpoint['alpha_optimizer_state_dict'])
+    
+        #    Optionally load replay buffer
+        if load_replay_buffer and 'replay_buffer' in checkpoint:
+            self.replay_buffer.buffer = checkpoint['replay_buffer']
+    
+        # Return episode and total steps if they exist, otherwise return 0
+        return checkpoint.get('episode', 0), checkpoint.get('total_steps', 0)
+    

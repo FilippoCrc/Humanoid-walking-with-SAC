@@ -98,28 +98,28 @@ class GaussianPolicy(nn.Module):
         
         return action, log_prob
 
-
-class ValueNetwork(nn.Module):
-    """
-    Optional Value Network for SAC. Some implementations use this instead of double Q-networks.
-    We include it for completeness, though modern implementations often skip it.
-    """
-    def __init__(self, state_dim, hidden_dim=256):
-        super(ValueNetwork, self).__init__()
+"""------------------------------- NO MORE NEEDED DATE: 21/12/2024 ----------------------------------"""
+# class ValueNetwork(nn.Module):
+#     """
+#     Optional Value Network for SAC. Some implementations use this instead of double Q-networks.
+#     We include it for completeness, though modern implementations often skip it.
+#     """
+#     def __init__(self, state_dim, hidden_dim=256):
+#         super(ValueNetwork, self).__init__()
         
-        self.fc1 = nn.Linear(state_dim, hidden_dim)
-        self.fc2 = nn.Linear(hidden_dim, hidden_dim)
-        self.fc3 = nn.Linear(hidden_dim, 1)
+#         self.fc1 = nn.Linear(state_dim, hidden_dim)
+#         self.fc2 = nn.Linear(hidden_dim, hidden_dim)
+#         self.fc3 = nn.Linear(hidden_dim, 1)
         
-        self.apply(self._init_weights)
+#         self.apply(self._init_weights)
     
-    def _init_weights(self, m):
-        if isinstance(m, nn.Linear):
-            torch.nn.init.xavier_uniform_(m.weight)
-            torch.nn.init.constant_(m.bias, 0)
+#     def _init_weights(self, m):
+#         if isinstance(m, nn.Linear):
+#             torch.nn.init.xavier_uniform_(m.weight)
+#             torch.nn.init.constant_(m.bias, 0)
     
-    def forward(self, state):
-        x = F.relu(self.fc1(state))
-        x = F.relu(self.fc2(x))
-        value = self.fc3(x)
-        return value
+#     def forward(self, state):
+#         x = F.relu(self.fc1(state))
+#         x = F.relu(self.fc2(x))
+#         value = self.fc3(x)
+#         return value

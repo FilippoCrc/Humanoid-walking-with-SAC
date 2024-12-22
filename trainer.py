@@ -2,11 +2,10 @@ import gymnasium as gym
 import numpy as np
 import torch
 from sac_imp import SAC
-import time
 from collections import deque
 import json
-import os
 
+#definizione e prima implementazione della classe SACTrainer
 class SACTrainer:
     """Handles the training process for SAC algorithm"""
     def __init__(
@@ -15,10 +14,10 @@ class SACTrainer:
         max_episodes=1000,
         max_steps=1000,
         batch_size=256,
-        eval_interval=10,
+        eval_interval=50,
         updates_per_step=1,
         start_steps=10000,
-        eval_episodes=10,
+        eval_episodes=50,
         debug_config = None
     ):
         # Default debugging configuration with more focused outputs
@@ -156,24 +155,20 @@ class SACTrainer:
 
         return mean_reward, std_reward
 
-    def train(self):
+    def train(self, start_episode=0, total_steps=0):
         """
         Main training loop for SAC algorithm.
-        Handles episode management, statistics collection, and model evaluation.
+        
+        Args:
+            start_episode (int): Episode number to start/resume from
+            total_steps (int): Total number of steps taken in previous training
         """
-        # Initialize training variables
-        total_steps = 0
-        best_eval_reward = float('-inf')
-        early_stop_patience = 50
+        best_eval_reward = getattr(self, 'best_eval_reward', float('-inf'))
+        early_stop_patience = 1000
         no_improvement_count = 0
         rolling_reward = deque(maxlen=100)
-        episode_reward = 0
-        episode_steps = 0
-        # Create directory for saving results
-        self.save_dir = f"results/sac_{self.env_name}_{int(time.time())}"
-        os.makedirs(self.save_dir, exist_ok=True)
-        # Print initial training information
-        print(f"\nStarting training on {self.env_name}")
+        
+        print(f"\nStarting training from episode {start_episode}")
         print(f"State dim: {self.env.observation_space.shape[0]}")
         print(f"Action dim: {self.env.action_space.shape[0]}")
         print(f"Training parameters:")
@@ -181,19 +176,14 @@ class SACTrainer:
         print(f"  Batch size: {self.batch_size}")
         print(f"  Updates per step: {self.updates_per_step}")
         print("\n" + "="*50)
-
-        for episode in range(self.max_episodes):
-            # Reset environment and episode variables
+        print(f"Total steps so far: {total_steps}")
+        
+        for episode in range(start_episode, self.max_episodes):
             state, _ = self.env.reset()
             episode_reward = 0
             episode_steps = 0
-            episode_actions = []
             done = False
             
-            # Reset episode statistics
-            for key in self.episode_stats:
-                self.episode_stats[key] = []
-
             while not done:
                 # Select action: random for exploration or from policy
                 if total_steps < self.start_steps:
@@ -201,46 +191,42 @@ class SACTrainer:
                 else:
                     action = self.agent.select_action(state)
                 
-                # Store action for statistics
-                episode_actions.append(action)
-                
-                # Take action in environment
+                # Take step in environment
                 next_state, reward, terminated, truncated, _ = self.env.step(action)
                 done = terminated or truncated
-                episode_steps += 1
-                total_steps += 1
-                episode_reward += reward
                 
-                # Store transition in replay buffer
+                # Store transition
                 self.agent.replay_buffer.push(state, action, reward, next_state, done)
                 
-                # Update networks if enough samples are gathered
+                state = next_state
+                episode_reward += reward
+                episode_steps += 1
+                total_steps += 1
+                
+                # Update networks
                 if len(self.agent.replay_buffer) > self.batch_size:
                     for _ in range(self.updates_per_step):
-                        losses = self.agent.update_parameters(self.batch_size)
-                        self.update_episode_stats(losses, None)  # Update loss statistics
+                        update_info = self.agent.update_parameters(self.batch_size)
+                        self.loss_history.append(update_info)
                 
-                state = next_state
-                
-                # End episode if max steps reached
                 if episode_steps >= self.max_steps:
                     done = True
-
-            # Update action statistics at episode end
-            self.update_episode_stats(None, episode_actions)
             
             # Store episode information
             self.rewards_history.append(episode_reward)
             self.episode_length_history.append(episode_steps)
             rolling_reward.append(episode_reward)
             
-            # Print episode summary
-            self.print_episode_summary(
-                episode, total_steps, episode_reward,
-                episode_steps, np.mean(rolling_reward)
-            )
-            
-            # Evaluate policy periodically
+            # Print episode information #TODO: add more info
+            if self.debug_config['print_episode_summary']:
+                print(f"\nEpisode {episode} - Steps: {total_steps}")
+                print(f"Reward: {episode_reward:.2f}")
+                print(f"Average Reward: {np.mean(rolling_reward):.2f}")
+                print(f"Episode steps: {episode_steps}")
+                print(f"Action mean: {np.mean(action):.2f}")
+                print(f"Action std: {np.std(action):.2f}")
+                
+            # Evaluate policy
             if episode % self.eval_interval == 0 and episode>2:
                 eval_reward, eval_std = self.evaluate_policy()
                 self.eval_rewards_history.append(eval_reward)
@@ -248,32 +234,26 @@ class SACTrainer:
                 # Save if best performance
                 if eval_reward > best_eval_reward:
                     best_eval_reward = eval_reward
-                    self.agent.save(f"{self.save_dir}/best_model.pt")
+                    if hasattr(self, 'save_best_model'):
+                        self.save_best_model()
                     no_improvement_count = 0
-                    print(f"New best model saved with reward: {best_eval_reward:.2f}")
-                else:
-                    no_improvement_count += 0
+                else: #possibile errore di fede? era no_improvement_count += 0 quindi non aumentava mai o messo a 0 per non farmarlo
+                    no_improvement_count += 1
                 
-                # Save training history
-                self.save_training_history()
-                
+                # Save checkpoint if available
+                if hasattr(self, 'save_checkpoint'):
+                    self.save_checkpoint(episode, total_steps)
+            
             # Early stopping check
             if no_improvement_count >= early_stop_patience:
                 print("\nNo improvement for a while. Stopping training.")
                 break
-            
-            # # Success criterion check for BipedalWalker
-            # if np.mean(rolling_reward) > 300:
-            #     print("\nEnvironment solved! Stopping training.")
-            #     break
-
-        # Final save and summary
-        self.agent.save(f"{self.save_dir}/final_model.pt")
+        
         print("\nTraining completed!")
         print(f"Total steps: {total_steps}")
         print(f"Best evaluation reward: {best_eval_reward:.2f}")
         print(f"Final average reward: {np.mean(rolling_reward):.2f}")
-    
+        
     def save_training_history(self):
         """Saves training metrics to disk"""
         history = {

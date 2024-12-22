@@ -4,47 +4,59 @@ import torch
 import numpy as np
 from trainer import SACTrainer
 from gymnasium.wrappers import RecordVideo
-import time
 import argparse
+from utility import capped_cubic_video_schedule
+
+""" GLOBAL VARIABLES"""
+MODEL_PATH_EVAL = "results\sac_nao_walk\best_model.pt"
+MODEL_PATH = "results/sac_nao_walk"
+ENV_NAME = "NaoWalk-v1"
 
 # Configure MuJoCo with EGL backend if GPU is available
 if torch.cuda.is_available():
-    NVIDIA_ICD_CONFIG_PATH = "/usr/share/glvnd/egl_vendor.d/10_nvidia.json"
-    if not os.path.exists(NVIDIA_ICD_CONFIG_PATH):
-        with open(NVIDIA_ICD_CONFIG_PATH, "w") as f:
-            f.write("""{"file_format_version": "1.0.0", "ICD": {"library_path": "libEGL_nvidia.so.0"}}""")
-    os.environ["MUJOCO_GL"] = "egl"
+     os.environ["MUJOCO_GL"] = "glfw"
 
-def capped_cubic_video_schedule(episode_id: int) -> bool:
-    """Video recording schedule for evaluation"""
-    return episode_id % 10 == 0  
-MODEL_PATH_EVAL = "results\sac_NaoWalk-v1_1734781102/best_model.pt"
+# Define the NAO Walk SAC Trainer super-class
 class NaoWalkSACTrainer(SACTrainer):
     def __init__(
         self,
         max_episodes=1000,
         max_steps=1000,
         batch_size=256,
-        eval_interval=20,
+        eval_interval=50,
         updates_per_step=1,
         start_steps=10000,
-        eval_episodes=5,
+        eval_episodes=50,
         render_eval=True,
-        model_dir="results/sac_nao_walk"
+        model_dir=MODEL_PATH,  # Changed default directory
+        #checkpoint_interval=50  # Change when to save checkpoints
     ):
-        # Register the environment
+        # Set up fixed directories
+        self.save_dir = model_dir
+        self.model_dir = model_dir
+        self.best_model_path = os.path.join(self.save_dir, "best_model.pt")
+        self.video_dir = os.path.join(self.save_dir, "videos")
+        
+        # Create directories if they don't exist, but don't clean them
+        os.makedirs(self.save_dir, exist_ok=True)
+        os.makedirs(self.video_dir, exist_ok=True)
+
+        # Print directory information
+        print("\nTraining Directory Setup:")
+        print(f"Main Directory: {self.save_dir}")
+        print(f"Checkpoint Location: {os.path.join(self.save_dir, 'checkpoint_latest.pt')}")
+        print(f"Video Directory: {self.video_dir}")
+        
+        # Register the NAO environment
         gym.register(
-            id="NaoWalk-v1",
+            id=ENV_NAME,
             entry_point="spqr_rl_mujoco.envs.walk_env:NaoWalk",
             max_episode_steps=1000,
         )
 
-        self.model_dir = model_dir
-        self.best_model_path = os.path.join(model_dir, "best_model.pt")
-        
-        # Initialize parent class with Nao environment
+        # Initialize parent class
         super().__init__(
-            env_name="NaoWalk-v1",
+            env_name=ENV_NAME,
             max_episodes=max_episodes,
             max_steps=max_steps,
             batch_size=batch_size,
@@ -54,28 +66,117 @@ class NaoWalkSACTrainer(SACTrainer):
             eval_episodes=eval_episodes
         )
 
-        # Create video directory
-        self.video_dir = f"videos/sac_nao_walk_{int(time.time())}"
-        os.makedirs(self.video_dir, exist_ok=True)
+        #self.checkpoint_interval = checkpoint_interval
 
-        # Create two separate evaluation environments
-        self.eval_env = gym.make("NaoWalk-v1")  # Clean env for evaluation
+        # Create evaluation environments
+        self.eval_env = gym.make(ENV_NAME)
         
-        # Optional separate environment for video recording
         if render_eval:
-            self.video_env = gym.make("NaoWalk-v1", render_mode="rgb_array")
+            self.video_env = gym.make(ENV_NAME, render_mode="rgb_array")
             self.video_env = RecordVideo(
                 self.video_env,
                 video_folder=self.video_dir,
                 episode_trigger=capped_cubic_video_schedule,
                 name_prefix="eval"
             )
+        else:
+            self.video_env = None
 
-        # Set up metrics tracking
+        # Initialize metrics tracking
         self.episode_metrics = []
+        self.best_eval_reward = float('-inf')
+
+        # Print training configuration
+        print("\nInitializing NAO Walk Training:")
+        print(f"Save Directory: {self.save_dir}")
+        print(f"Video Directory: {self.video_dir}")
+        print(f"Max Episodes: {max_episodes}")
+        #print(f"Checkpoint Interval: {checkpoint_interval}")
+        print(f"Evaluation Interval: {eval_interval}")
+        print("=" * 50)
+
+    def save_checkpoint(self, episode, total_steps):
+        """
+        Saves a complete checkpoint with verification.
+        """
+        print(f"\nSaving checkpoint for episode {episode}...")
+        
+        checkpoint_path = os.path.join(self.save_dir, f"checkpoint_latest.pt")
+        metrics_path = os.path.join(self.save_dir, "latest_metrics.pt")
+        
+        # Save detailed training state
+        training_state = {
+            'current_episode': episode,
+            'total_steps': total_steps,
+            'rewards_history': self.rewards_history,
+            'eval_rewards_history': self.eval_rewards_history,
+            'episode_length_history': self.episode_length_history,
+            'loss_history': self.loss_history,
+            'best_eval_reward': self.best_eval_reward,
+            'episode_metrics': self.episode_metrics
+        }
+        
+        # Save agent state
+        self.agent.save_checkpoint(checkpoint_path, episode, total_steps)
+        
+        # Save training metrics
+        torch.save(training_state, metrics_path)
+        
+        print(f"Checkpoint saved:")
+        print(f"- Episode: {episode}")
+        print(f"- Total steps: {total_steps}")
+        #print(f"- Checkpoint path: {checkpoint_path}")
+        #print(f"- Metrics path: {metrics_path}")
+
+    def load_checkpoint(self, checkpoint_path=None):
+        """
+        Loads the most recent checkpoint with detailed verification printing.
+        """
+        if checkpoint_path is None:
+            checkpoint_path = os.path.join(self.save_dir, "checkpoint_latest.pt")
+        
+        if not os.path.exists(checkpoint_path):
+            raise FileNotFoundError(f"No checkpoint found at {checkpoint_path}")
+        
+        print("\nLoading checkpoint from:", checkpoint_path)
+        
+        # Load training metrics first
+        metrics_path = os.path.join(os.path.dirname(checkpoint_path), "latest_metrics.pt")
+        if os.path.exists(metrics_path):
+            print("Found metrics file:", metrics_path)
+            training_state = torch.load(metrics_path)
+            
+            # Load and verify all training state
+            self.rewards_history = training_state['rewards_history']
+            self.eval_rewards_history = training_state['eval_rewards_history']
+            self.episode_length_history = training_state['episode_length_history']
+            self.loss_history = training_state['loss_history']
+            self.best_eval_reward = training_state['best_eval_reward']
+            self.episode_metrics = training_state['episode_metrics']
+            
+            current_episode = training_state['current_episode']
+            total_steps = training_state['total_steps']
+            
+            print(f"Loaded training state:")
+            print(f"- Current episode: {current_episode}")
+            print(f"- Total steps: {total_steps}")
+            print(f"- History length: {len(self.rewards_history)} episodes")
+            print(f"- Best reward so far: {self.best_eval_reward:.2f}")
+        else:
+            print("Warning: No metrics file found!")
+            return 0, 0
+        
+        # Now load the agent's state
+        self.agent.load_checkpoint(checkpoint_path)
+        print("Agent state loaded successfully")
+        
+        return current_episode, total_steps
 
     def evaluate_policy(self):
-        """Evaluation method used during training"""
+        """
+        Evaluates the current policy by running multiple episodes and collecting metrics.
+        Returns mean and standard deviation of evaluation rewards.
+        """
         eval_rewards = []
         eval_lengths = []
         forward_distances = []
@@ -89,10 +190,12 @@ class NaoWalkSACTrainer(SACTrainer):
             done = False
             
             while not done:
+                # Get action from the policy and take step in environment
                 action = self.agent.select_action(state, evaluate=True)
                 next_state, reward, terminated, truncated, info = self.eval_env.step(action)
                 done = terminated or truncated
                 
+                # Track initial position for distance calculation
                 if start_x is None and 'x_position' in info:
                     start_x = info['x_position']
                 
@@ -100,15 +203,17 @@ class NaoWalkSACTrainer(SACTrainer):
                 episode_steps += 1
                 state = next_state
             
+            # Calculate performance metrics
             total_distance = info['x_position'] - start_x if start_x is not None else 0
             avg_velocity = total_distance / episode_steps if episode_steps > 0 else 0
             
+            # Store metrics
             eval_rewards.append(episode_reward)
             eval_lengths.append(episode_steps)
             forward_distances.append(total_distance)
             avg_velocities.append(avg_velocity)
 
-            # Store metrics
+            # Record detailed metrics for this evaluation episode
             self.episode_metrics.append({
                 'episode': len(self.episode_metrics),
                 'reward': episode_reward,
@@ -121,26 +226,17 @@ class NaoWalkSACTrainer(SACTrainer):
                 'alive_bonus': info.get('reward_alive', 0)
             })
 
-            # Record video if configured
+            # Record evaluation video if enabled
             if self.video_env is not None:
-                try:
-                    video_state, _ = self.video_env.reset()
-                    video_done = False
-                    video_steps = 0
-                    
-                    while not video_done and video_steps < episode_steps:
-                        video_action = self.agent.select_action(video_state, evaluate=True)
-                        video_state, _, video_terminated, video_truncated, _ = self.video_env.step(video_action)
-                        video_done = video_terminated or video_truncated
-                        video_steps += 1
-                except Exception as e:
-                    print(f"Warning: Failed to record video: {e}")
+                self._record_evaluation_video(episode_steps)
 
+        # Calculate summary statistics
         mean_reward = np.mean(eval_rewards)
         std_reward = np.std(eval_rewards)
         mean_distance = np.mean(forward_distances)
         mean_velocity = np.mean(avg_velocities)
 
+        # Print evaluation summary if enabled
         if self.debug_config['print_eval_summary']:
             print(f"\n{'='*50}")
             print(f"Training Evaluation Summary:")
@@ -155,11 +251,14 @@ class NaoWalkSACTrainer(SACTrainer):
         return mean_reward, std_reward
 
     def evaluate_with_render(self, episodes=10):
-        """Separate evaluation method with human rendering for visual inspection"""
-        print("\nStarting human-rendered evaluation...")
+        """
+        Evaluates the policy with human-viewable rendering for visual inspection.
         
-        # Create a new environment with human rendering
-        render_env = gym.make("NaoWalk-v1", render_mode='human')
+        Args:
+            episodes (int): Number of episodes to evaluate
+        """
+        print("\nStarting human-rendered evaluation...")
+        render_env = gym.make(ENV_NAME, render_mode='human')
         
         rewards = []
         steps = []
@@ -212,7 +311,7 @@ class NaoWalkSACTrainer(SACTrainer):
             render_env.close()
 
     def _save_metrics(self):
-        """Save evaluation metrics to a file"""
+        """Saves detailed evaluation metrics to a file."""
         metrics_path = os.path.join(self.save_dir, "evaluation_metrics.txt")
         with open(metrics_path, 'w') as f:
             for metric in self.episode_metrics:
@@ -227,27 +326,60 @@ class NaoWalkSACTrainer(SACTrainer):
                 f.write(f"  Alive Bonus: {metric['alive_bonus']:.3f}\n")
                 f.write("-" * 30 + "\n")
 
+    def _record_evaluation_video(self, max_steps):
+        """Records a video of an evaluation episode."""
+        try:
+            state, _ = self.video_env.reset()
+            done = False
+            steps = 0
+            
+            while not done and steps < max_steps:
+                action = self.agent.select_action(state, evaluate=True)
+                state, _, terminated, truncated, _ = self.video_env.step(action)
+                done = terminated or truncated
+                steps += 1
+        except Exception as e:
+            print(f"Warning: Failed to record video: {e}")
+
+    def save_best_model(self):
+        """
+        Saves the best performing model during training.
+        This method is called whenever the agent achieves a new best evaluation reward.
+        The saved model can be used later for deployment or continued training.
+        """
+        # Create the models directory if it doesn't exist
+        os.makedirs(os.path.dirname(self.best_model_path), exist_ok=True)
+    
+        # Save the model
+        self.agent.save(self.best_model_path)
+    
+        # Log the save event
+        print(f"\nNew best model saved to: {self.best_model_path}")
+    
+        """ # Optionally save additional metrics about this best model
+        best_model_metrics_path = os.path.join(self.save_dir, "best_model_metrics.txt")
+        with open(best_model_metrics_path, 'w') as f:
+            f.write(f"Best Model Metrics:\n")
+            f.write(f"Evaluation Reward: {self.best_eval_reward:.2f}\n")
+            f.write(f"Saved at: {time.strftime('%Y-%m-%d %H:%M:%S')}\n") """
+
+
+
+
 def main():
     parser = argparse.ArgumentParser(description='Train and evaluate SAC on NAO Walking')
-    parser.add_argument('--render', action='store_true', 
-                       help='Render the environment during evaluation')
-    parser.add_argument('--train', action='store_true',
-                       help='Train the SAC agent')
-    parser.add_argument('--evaluate', action='store_true',
-                       help='Evaluate the trained agent')
-    parser.add_argument('--episodes', type=int, default=10,
-                       help='Number of evaluation episodes')
-    parser.add_argument('--model-path', type=str, default=None,
-                       help='Path to load a specific model for evaluation')
-    
+    parser.add_argument('--train', action='store_true', help='Train the SAC agent')
+    parser.add_argument('--render', action='store_true', help='Render the environment during evaluation')
+    parser.add_argument('--evaluate', action='store_true', help='Evaluate the trained agent')
+    parser.add_argument('--checkpoint-path', type=str, help='Path to checkpoint file to resume training')
     args = parser.parse_args()
 
-    # Initialize the trainer
+    #actual class callback
     trainer = NaoWalkSACTrainer(
         max_episodes=20000,
         max_steps=1000,
         batch_size=256,
-        eval_interval=20,
+        eval_interval=50,
         updates_per_step=1,
         start_steps=0,
         eval_episodes=5,
@@ -255,28 +387,33 @@ def main():
     )
 
     if args.train:
-        print("Starting SAC training for Nao Walking...")
-        trainer.train()
-        print(f"Training completed. Final model saved to {trainer.best_model_path}")
+        if args.checkpoint_path:
+            print("\nAttempting to resume training from checkpoint...")
+            print(f"Checkpoint path: {args.checkpoint_path}")
+            
+            # Load checkpoint and get the starting episode
+            start_episode, total_steps = trainer.load_checkpoint(args.checkpoint_path)
+            
+            # Verify loaded state
+            print("\nTraining will resume from:")
+            print(f"Episode: {start_episode}")
+            print(f"Total Steps: {total_steps}")
+            input("Press Enter to continue or Ctrl+C to abort...")
+            
+            # Pass the correct parameters to train
+            trainer.train(start_episode=start_episode, total_steps=total_steps)
+        else:
+            print("\nStarting new training session...")
+            trainer.train()
 
     if args.evaluate:
-        print("\nStarting evaluation phase...")
-        model_path = MODEL_PATH_EVAL
+        if not os.path.exists(trainer.best_model_path):
+            print(f"Error: No model found at {trainer.best_model_path}")
+            return
         
-        if os.path.exists(model_path):
-            trainer.agent.load(model_path)
-            print(f"Model loaded successfully from {model_path}!")
-            if args.render:
-                trainer.evaluate_with_render(episodes=args.episodes)
-            else:
-                trainer.evaluate_policy()
-        else:
-            print(f"Error: Model file not found at: {model_path}")
-            print("Please make sure you have trained the model first or provide a valid model path.")
-
-    # Close environments
-    trainer.env.close()
-    trainer.eval_env.close()
+        print("\nLoading best model for evaluation...")
+        trainer.load_checkpoint(trainer.best_model_path)
+        trainer.evaluate_with_render(episodes=10)
 
 if __name__ == "__main__":
     main()
