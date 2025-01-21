@@ -239,7 +239,7 @@ class SACTrainer:
                     if hasattr(self, 'save_best_model'):
                         self.save_best_model()
                     no_improvement_count = 0
-                else: #possibile errore di fede? era no_improvement_count += 0 quindi non aumentava mai o messo a 0 per non farmarlo
+                else: 
                     no_improvement_count += 1
                 
                 # Save checkpoint if available
