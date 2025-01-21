@@ -4,18 +4,14 @@ import gymnasium as gym
 from trainer import SACTrainer
 import torch
 import os
-from utility import TrainingVisualizer
-
-json_path = "results\sac_Humanoid-v5_1734629000\training_history.json"  # Update this path to your JSON file
-save_dir = "training_plots"  # Directory where plots will be saved
-    
 
 # Define the path to the model
-MODEL_DIR = "results\sac_Humanoid-v5_1734629000"  # Change this to your model directory
+MODEL_DIR = "results\sac_Humanoid-v4_1734702288"  # Change this to your model directory
 MODEL_PATH = os.path.join(MODEL_DIR, "best_model.pt")
-ENV_NAME = "Humanoid-v4"
+NAME_ENV = "BipedalWalker-v3"
+
 def main():
-    parser = argparse.ArgumentParser(description='Train and evaluate SAC on BipedalWalker')
+    parser = argparse.ArgumentParser(description='Train and evaluate SAC on Walker2d-v4 ')
     
     # Simplified command line arguments
     parser.add_argument('--render', action='store_true', 
@@ -28,15 +24,16 @@ def main():
                        help='Number of evaluation episodes')
     
     args = parser.parse_args()
+
     # Create the trainer with default parameters
     trainer = SACTrainer(
-        env_name=ENV_NAME,
-        max_episodes=20000,
+        env_name= NAME_ENV,
+        max_episodes=600,
         max_steps=1000,
         batch_size=256,
         eval_interval=20,
         updates_per_step=1,
-        start_steps=15000,
+        start_steps=1000,
         eval_episodes=args.episodes
     )
 
@@ -53,7 +50,7 @@ def main():
         
         # Set up environment with rendering if specified
         if args.render:
-            trainer.eval_env = gym.make(ENV_NAME, render_mode='human')
+            trainer.eval_env = gym.make(NAME_ENV, render_mode='human')
         
         try:
             # Verify model file exists
@@ -94,7 +91,7 @@ def main():
             mean_reward = np.mean(rewards)
             std_reward = np.std(rewards)
             mean_steps = np.mean(steps)
-            success_rate = sum(r > 300 for r in rewards) / len(rewards)
+            success_rate = sum(r > 1000 for r in rewards) / len(rewards)
             
             print("\nEvaluation Summary:")
             print(f"Average Reward: {mean_reward:.2f} ± {std_reward:.2f}")
@@ -110,12 +107,6 @@ def main():
         
         finally:
             trainer.eval_env.close()
-
-
-    # Create visualizer and generate all plots
-    visualizer = TrainingVisualizer(json_path)
-    visualizer.create_full_visualization(save_dir)
-
 
 if __name__ == '__main__':
     main()
