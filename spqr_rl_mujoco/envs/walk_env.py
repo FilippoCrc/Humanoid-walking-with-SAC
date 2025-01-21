@@ -62,7 +62,7 @@ class NaoWalk(MujocoEnv, utils.EzPickle):
         pos_after = data.qpos[0]
         
         # Calculate forward velocity
-        forward_vel = (pos_after - pos_before) / self.dt
+        forward_vel = 1.25*(pos_after - pos_before) / self.dt #1.25 forward weight
         
         # Get z position of torso
         torso_z = data.qpos[2]
@@ -99,10 +99,9 @@ class NaoWalk(MujocoEnv, utils.EzPickle):
    # Check termination conditions
         terminated = False
         if (torso_z < 0.20 or torso_z > 0.5 or  # height check
-            abs(roll) > 1.0 or    # roll > ~57 degrees
-            abs(pitch) > 1.0):    # pitch > ~57 degrees
-            print("roll",abs(roll))
-            print("pitch",abs(pitch))
+            abs(roll) > 2.0 or    # roll > ~57 degrees
+            abs(pitch) > 2.0):    # pitch > ~57 degrees
+            
             terminated = True
             reward = 0.0
 

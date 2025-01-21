@@ -4,6 +4,11 @@ import gymnasium as gym
 from trainer import SACTrainer
 import torch
 import os
+from utility import TrainingVisualizer
+
+json_path = "results\sac_Humanoid-v5_1734629000\training_history.json"  # Update this path to your JSON file
+save_dir = "training_plots"  # Directory where plots will be saved
+    
 
 # Define the path to the model
 MODEL_DIR = "results\sac_Humanoid-v5_1734629000"  # Change this to your model directory
@@ -105,6 +110,12 @@ def main():
         
         finally:
             trainer.eval_env.close()
+
+
+    # Create visualizer and generate all plots
+    visualizer = TrainingVisualizer(json_path)
+    visualizer.create_full_visualization(save_dir)
+
 
 if __name__ == '__main__':
     main()

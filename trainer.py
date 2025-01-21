@@ -5,7 +5,6 @@ from sac_imp import SAC
 from collections import deque
 import json
 
-#definizione e prima implementazione della classe SACTrainer
 class SACTrainer:
     """Handles the training process for SAC algorithm"""
     def __init__(
@@ -225,9 +224,9 @@ class SACTrainer:
                 print(f"Episode steps: {episode_steps}")
                 print(f"Action mean: {np.mean(action):.2f}")
                 print(f"Action std: {np.std(action):.2f}")
-                print(f"Q1 loss: {update_info['q1_loss']:.4f}")
-                print(f"Q2 loss: {update_info['q2_loss']:.4f}")
-                print(f"Policy loss: {update_info['policy_loss']:.4f}")
+                #print(f"Q1 loss: {update_info['q1_loss']:.4f}")
+                #print(f"Q2 loss: {update_info['q2_loss']:.4f}")
+                #print(f"Policy loss: {update_info['policy_loss']:.4f}")
                 
             # Evaluate policy
             if episode % self.eval_interval == 0 and episode>2:

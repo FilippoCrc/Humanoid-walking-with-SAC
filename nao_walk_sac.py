@@ -249,7 +249,6 @@ class NaoWalkSACTrainer(SACTrainer):
 
         self._save_metrics()
         return mean_reward, std_reward
-
     def evaluate_with_render(self, episodes=10):
         """
         Evaluates the policy with human-viewable rendering for visual inspection.

@@ -82,7 +82,7 @@ class SAC:
             with torch.no_grad():
                 mean, _ = self.policy(state)
                 action = torch.tanh(mean)  # Apply tanh
-                # Add this line to properly scale the actions
+                # scale the actions
                 action = action * self.policy.action_scale + self.policy.action_bias
                 #print("action choosen during eval",action.cpu().numpy()[0])
                 return action.cpu().numpy()[0]
@@ -95,7 +95,7 @@ class SAC:
 
     def update_parameters(self, batch_size=256):
         """Update the networks using a batch of experiences"""
-        # Sample a batch from replay buffer
+        # Sample from replay buffer
         state_batch, action_batch, reward_batch, next_state_batch, done_batch = \
             self.replay_buffer.sample(batch_size)
 
@@ -199,6 +199,7 @@ class SAC:
         self.alpha = checkpoint['alpha']
 
     """------------------------- NEW CODE ADDED FOR THE CHECKPOINT FUNCTIONALITY -DATE:22/12/2024 --------------------------"""
+    
     def save_checkpoint(self, path, episode, total_steps, replay_buffer=True):
         """Enhanced save method that includes training state"""
         checkpoint = {
