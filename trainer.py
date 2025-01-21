@@ -5,7 +5,6 @@ from sac_imp import SAC
 from collections import deque
 import json
 
-#definizione e prima implementazione della classe SACTrainer
 class SACTrainer:
     """Handles the training process for SAC algorithm"""
     def __init__(
