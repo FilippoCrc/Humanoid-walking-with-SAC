@@ -84,7 +84,7 @@ def main():
     # Create the trainer with default parameters
     trainer = SACTrainer(
         env_name=args.env,
-        max_episodes=20000,
+        max_episodes=10,
         max_steps=1000,
         batch_size=256,
         eval_interval=20,
