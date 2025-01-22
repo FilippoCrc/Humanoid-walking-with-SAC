@@ -4,7 +4,7 @@ import torch.optim as optim
 import numpy as np
 from collections import deque
 import random
-from networks import QNetwork, GaussianPolicy
+from networks_first_model import QNetwork, GaussianPolicy
 from replay_buffer import ReplayBuffer, PrioritizedReplayBuffer
 
 class SAC:
