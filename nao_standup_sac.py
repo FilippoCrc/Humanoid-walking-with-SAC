@@ -31,7 +31,7 @@ class NaoStandupSACTrainer(SACTrainer):
         start_steps=10000,
         eval_episodes=5,
         render_eval=True,
-        model_dir="results/sac_nao"
+        model_dir="results\sac_NaoStandup-v1_1734685744"
     ):
         # Register the environment
         gym.register(
@@ -207,13 +207,13 @@ def main():
 
     # Initialize the trainer
     trainer = NaoStandupSACTrainer(
-        max_episodes=2000,
+        max_episodes=2,
         max_steps=1000,
         batch_size=256,
-        eval_interval=10,
+        eval_interval=1,
         updates_per_step=1,
         start_steps=10000,
-        eval_episodes=5,
+        eval_episodes=1,
         render_eval=True
     )
 
