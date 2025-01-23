@@ -1,10 +1,8 @@
-import torch
 import json
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from typing import Dict, List
-import pandas as pd
 from pathlib import Path
 
 def capped_cubic_video_schedule(episode_id: int) -> bool:
@@ -12,37 +10,25 @@ def capped_cubic_video_schedule(episode_id: int) -> bool:
     return episode_id % 10 == 0  
 
 class TrainingVisualizer:
-    """
-    A class to create comprehensive visualizations of SAC training results.
-    This includes reward plots, episode lengths, and training statistics.
-    """
     
     def __init__(self, json_path: str):
-        """
-        Initialize the visualizer with training data.
-        
-        Args:
-            json_path: Path to the training history JSON file
-        """
         # Set up the visual style
         plt.style.use('seaborn')
         sns.set_palette("husl")
         
         # Load and process the training data
-        self.data = self._load_training_data(json_path)
-        self.statistics = self._calculate_statistics()
+        self.data = self.load_training_data(json_path)
+        self.statistics = self.calculate_statistics()
         
         # Calculate moving averages for smoothing
-        self.moving_avg = self._calculate_moving_average(self.data['rewards'], window=100)
+        self.moving_avg = self.calculate_moving_average(self.data['rewards'], window=100)
         
-    def _load_training_data(self, json_path: str) -> Dict:
-        """Load training data from JSON file."""
+    def load_training_data(self, json_path: str) -> Dict:
         with open(json_path, 'r') as f:
             data = json.load(f)
         return data
     
-    def _calculate_statistics(self) -> Dict:
-        """Calculate key training statistics."""
+    def calculate_statistics(self) -> Dict:
         return {
             'total_episodes': len(self.data['rewards']),
             'best_reward': max(self.data['rewards']),
@@ -52,16 +38,12 @@ class TrainingVisualizer:
             'final_avg': np.mean(self.data['rewards'][-100:])
         }
     
-    def _calculate_moving_average(self, values: List[float], window: int) -> np.ndarray:
+    def calculate_moving_average(self, values: List[float], window: int) -> np.ndarray:
         """Calculate moving average with specified window size."""
         weights = np.ones(window) / window
         return np.convolve(values, weights, mode='valid')
     
     def create_training_progress_plot(self, save_path: str = None):
-        """
-        Create a comprehensive plot showing training progress over time.
-        Includes episode rewards, evaluation rewards, and moving average.
-        """
         plt.figure(figsize=(12, 6))
         
         # Plot episode rewards with low opacity
@@ -74,9 +56,7 @@ class TrainingVisualizer:
         
         # Plot evaluation rewards
         eval_x = np.arange(0, len(self.data['rewards']), 50)[:len(self.data['eval_rewards'])]
-        plt.plot(eval_x, self.data['eval_rewards'], 'go', label='Evaluation Reward',
-                color='#22c55e', markersize=8)
-        
+        plt.plot(eval_x, self.data['eval_rewards'], 'go', label='Evaluation Reward', color='#22c55e', markersize=8)
         plt.title('Humanoid SAC Training Progress', fontsize=14, pad=20)
         plt.xlabel('Episode', fontsize=12)
         plt.ylabel('Reward', fontsize=12)
@@ -88,15 +68,12 @@ class TrainingVisualizer:
         plt.show()
         
     def create_episode_length_plot(self, save_path: str = None):
-        """Create a plot showing episode lengths over time."""
+        """ plot showing episode lengths over time."""
         plt.figure(figsize=(12, 4))
         
         # Create filled area plot for episode lengths
-        plt.fill_between(range(len(self.data['episode_lengths'])), 
-                        self.data['episode_lengths'],
-                        alpha=0.3, color='#8b5cf6')
+        plt.fill_between(range(len(self.data['episode_lengths'])), self.data['episode_lengths'], alpha=0.3, color='#8b5cf6')
         plt.plot(self.data['episode_lengths'], color='#8b5cf6', alpha=0.7)
-        
         plt.title('Episode Lengths Over Training', fontsize=14, pad=20)
         plt.xlabel('Episode', fontsize=12)
         plt.ylabel('Steps', fontsize=12)

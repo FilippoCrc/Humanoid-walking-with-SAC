@@ -1,30 +1,8 @@
 import torch
 import torch.nn.functional as F
 import torch.optim as optim
-import numpy as np
-from collections import deque
-import random
-from networks import QNetwork, GaussianPolicy
-
-class ReplayBuffer:
-    """Stores experience tuples for off-policy training"""
-    def __init__(self, capacity=1000000):
-        self.buffer = deque(maxlen=capacity)
-    
-    def push(self, state, action, reward, next_state, done):
-        self.buffer.append((state, action, reward, next_state, done))
-    
-    def sample(self, batch_size):
-        # Random sampling with replacement
-        transitions = random.sample(self.buffer, batch_size)
-        # Transpose the batch for easier access
-        state, action, reward, next_state, done = zip(*transitions)
-        return (np.array(state), np.array(action), np.array(reward), 
-                np.array(next_state), np.array(done))
-    
-    def __len__(self):
-        return len(self.buffer)
-
+from networks_model1 import QNetwork, GaussianPolicy
+from replay_buffer import ReplayBuffer
 
 class SAC:
     """Soft Actor-Critic implementation for continuous action spaces"""
@@ -168,14 +146,10 @@ class SAC:
     def _soft_update_target_networks(self):
         """Soft update the target networks using the tau parameter"""
         for target_param, param in zip(self.q1_target.parameters(), self.q1.parameters()):
-            target_param.data.copy_(
-                target_param.data * (1.0 - self.tau) + param.data * self.tau
-            )
+            target_param.data.copy_(target_param.data * (1.0 - self.tau) + param.data * self.tau)
         
         for target_param, param in zip(self.q2_target.parameters(), self.q2.parameters()):
-            target_param.data.copy_(
-                target_param.data * (1.0 - self.tau) + param.data * self.tau
-            )
+            target_param.data.copy_(target_param.data * (1.0 - self.tau) + param.data * self.tau)
             
     def save(self, path):
         """Save the model parameters"""
@@ -201,7 +175,6 @@ class SAC:
     """------------------------- NEW CODE ADDED FOR THE CHECKPOINT FUNCTIONALITY -DATE:22/12/2024 --------------------------"""
     
     def save_checkpoint(self, path, episode, total_steps, replay_buffer=True):
-        """Enhanced save method that includes training state"""
         checkpoint = {
             'episode': episode,
             'total_steps': total_steps,
@@ -228,7 +201,6 @@ class SAC:
             torch.save(checkpoint, path)
 
     def load_checkpoint(self, path, load_replay_buffer=True):
-        """Enhanced load method that restores training state"""
         checkpoint = torch.load(path)
     
         # Load network states

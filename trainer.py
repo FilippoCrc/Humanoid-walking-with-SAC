@@ -1,6 +1,5 @@
 import gymnasium as gym
 import numpy as np
-import torch
 from sac_imp import SAC
 from collections import deque
 import json
@@ -75,7 +74,6 @@ class SACTrainer:
         
     
     def print_episode_summary(self, episode, total_steps, episode_reward, episode_length, rolling_reward):
-        """Prints a concise summary of the episode"""
         if not self.debug_config['print_episode_summary']:
             return
 
@@ -115,12 +113,10 @@ class SACTrainer:
             self.episode_stats['action_stds'].append(np.std(actions, axis=0))
 
     def debug_print(self, category, message):
-        """Utility function for conditional debugging output"""
         if self.debug_config.get(f'print_{category}', False):
             print(f"[DEBUG-{category}] {message}")
 
     def evaluate_policy(self):
-        """Evaluation with concise output"""
         eval_rewards = []
         eval_lengths = []
         
@@ -257,7 +253,7 @@ class SACTrainer:
         print(f"Final average reward: {np.mean(rolling_reward):.2f}")
         
     def save_training_history(self):
-        """Saves training metrics to disk"""
+        """Saves training metrics to a JSON file"""
         history = {
             'rewards': self.rewards_history,
             'eval_rewards': self.eval_rewards_history,
