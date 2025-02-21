@@ -50,7 +50,7 @@ class GaussianPolicy(nn.Module):
         
         # Store action bounds for scaling
         if action_bounds is None:
-            action_bounds = (-0.4, 0.4)  # Bounds for humanoid robot
+            action_bounds = (-0.4, 0.4)  # CHANGE THIS BASED ON YOUR ENVIRONMENT
         self.action_scale = (action_bounds[1] - action_bounds[0]) / 2
         self.action_bias = (action_bounds[1] + action_bounds[0]) / 2
         
@@ -98,7 +98,7 @@ class GaussianPolicy(nn.Module):
         
         return action, log_prob
 
-"""------------------------------- NO MORE NEEDED DATE: 21/12/2024 ----------------------------------"""
+"""------------------------------- NO MORE NEEDED, DATE: 21/12/2024 ----------------------------------"""
 # class ValueNetwork(nn.Module):
 #     """
 #     Optional Value Network for SAC. Some implementations use this instead of double Q-networks.

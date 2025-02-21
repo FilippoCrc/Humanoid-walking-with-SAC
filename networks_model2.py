@@ -62,7 +62,7 @@ class GaussianPolicy(nn.Module):
         
         # Store action bounds for scaling
         if action_bounds is None:
-            action_bounds = (-0.4, 0.4)  # Default action bounds for humanoid
+            action_bounds = (-0.4, 0.4)  # CHANGE THIS BASED ON YOUR ENVIRONMENT
         self.action_scale = (action_bounds[1] - action_bounds[0]) / 2
         self.action_bias = (action_bounds[1] + action_bounds[0]) / 2
         

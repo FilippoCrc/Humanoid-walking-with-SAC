@@ -4,13 +4,17 @@ import gymnasium as gym
 from trainer import SACTrainer
 import os
 
+#-----------------------------------------------------------------------------------
 # Main file for bipedalwalker, walker2d, humanoid
 # Use this for train and evaluate the above env
+#-----------------------------------------------------------------------------------
 
 # Define the path to the model
 MODEL_DIR = "results\sac_BipedalWalker-v3_1734513256"  # Change this to your model directory
 MODEL_PATH = os.path.join(MODEL_DIR, "best_model.pt")
-ENV_NAME = "BipedalWalker-v3"
+ENV_NAME = "BipedalWalker-v3"  #change this to walker2d or humanoid
+#CHANGE ALSO THE ACTION BOUNDS IN networks_model.py BASED ON YOUR ENVIRONMENT
+
 
 def main():
     parser = argparse.ArgumentParser(description='Train and evaluate SAC on BipedalWalker')
